@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCE Order Tracker</title>
+    
+    <!-- 1. Styling (Tailwind CSS via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Charting Library (Chart.js via CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 3. Excel Export Library (SheetJS via CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- HEADER -->
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
+            <p class="text-gray-500 text-sm">Manual Entry System • Local Storage Enabled</p>
+        </div>
+        <div class="flex gap-4 items-center">
+            <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
+            <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
+        </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div class="card p-4 border-l-4 border-blue-500">
+            <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
+            <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
+        </div>
+        <div class="card p-4 border-l-4 border-yellow-500">
+            <p class="text-xs text-gray-500 font-bold uppercase">In Process</p>
+            <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
+        </div>
+        <div class="card p-4 border-l-4 border-green-500">
+            <p class="text-xs text-gray-500 font-bold uppercase">Completed</p>
+            <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
+        </div>
+        <div class="card p-4 border-l-4 border-red-500">
+            <p class="text-xs text-gray-500 font-bold uppercase">Overdue (>30m)</p>
+            <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
+        </div>
+        <div class="card p-4 border-l-4 border-gray-500">
+            <p class="text-xs text-gray-500 font-bold uppercase">Cancelled</p>
+            <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- LEFT COLUMN: LIST -->
+        <div class="space-y-6">
+            <!-- ORDER TRACKER TABLE -->
+            <div class="card overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <h2 class="text-lg font-bold text-gray-700">⏱️ Active Order Tracker</h2>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <div class="flex gap-1">
+                            <button onclick="downloadOrderSample()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1.5 rounded border border-gray-300 flex items-center gap-1 whitespace-nowrap" title="Download Template">📄 Sample</button>
+                            <button onclick="document.getElementById('orderUploadInput').click()" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1.5 rounded border border-blue-200 flex items-center gap-1 whitespace-nowrap" title="Import CSV">📥 Import</button>
+                            <input type="file" id="orderUploadInput" accept=".csv" onchange="uploadOrderList(this)" class="hidden">
+                        </div>
+                        <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="🔍 Search by Order #, SKU, or Description..." class="w-full md:w-64 border border-gray-300 rounded-md p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <span id="pendingCount" class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded whitespace-nowrap">0 Pending</span>
+                    </div>
+                </div>
+                <div class="overflow-auto max-h-[70vh]">
+                    <table class="min-w-full text-left text-sm whitespace-nowrap">
+                        <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-100 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-4 py-3">Order #</th>
+                                <th class="px-4 py-3">SKU</th>
+                                <th class="px-4 py-3">Description</th>
+                                <th class="px-4 py-3">Qty</th>
+                                <th class="px-4 py-3">In Time</th>
+                                <th class="px-4 py-3">Out Time / Duration</th>
+                                <th class="px-4 py-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTableBody" class="divide-y divide-gray-200">
+                            <!-- Rows inserted via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- PAGINATION CONTROLS -->
+                <div id="paginationControls" class="p-4 border-t border-gray-200 flex justify-between items-center text-sm">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: CHARTS & CONTROLS -->
+        <div class="space-y-6">
+            <button onclick="openModal()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition flex items-center justify-center text-xl">
+                <span class="text-2xl mr-3">+</span> Create New Order
+            </button>
+
+            <!-- DASHBOARD GRIDS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">🔥 Fast Moving SKUs</h2>
+                    <div class="h-48">
+                        <canvas id="velocityChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">⏰ Hourly Volume</h2>
+                    <div class="h-48">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-6">
+                <h2 class="text-lg font-bold mb-2 text-gray-700"> Daily Volume</h2>
+                <div class="h-48">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- SKU MASTER CARD -->
+            <div class="card p-6 h-fit">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-700">📚 SKU Master List</h2>
+                    <button id="toggleSkuMasterBtn" onclick="toggleSkuMaster()" class="text-sm text-blue-600 hover:underline">[Hide]</button>
+                </div>
+                <div id="skuMasterContent">
+                    <div class="mb-4 pb-4 border-b border-gray-100">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bulk Upload (CSV)</label>
+                        <input type="file" accept=".csv" onchange="uploadSkuList(this)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                        <p class="text-xs text-gray-400 mt-1">Format: SKU, Description (One per line)</p>
+                    </div>
+                    <form onsubmit="addSkuToMaster(event)" class="mb-4">
+                        <input type="text" id="newSkuCode" required class="w-full border rounded p-2 text-sm mb-2" placeholder="SKU Code (e.g. A-001)">
+                        <input type="text" id="newSkuDesc" required class="w-full border rounded p-2 text-sm mb-2" placeholder="Description (e.g. Blue Widget)">
+                        <button type="submit" class="w-full bg-gray-600 text-white text-sm font-bold py-2 rounded hover:bg-gray-700">Add to Master</button>
+                    </form>
+                    <div class="max-h-48 overflow-y-auto border-t pt-2">
+                        <ul id="skuMasterList" class="text-sm space-y-2"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ORDER MODAL -->
+    <div id="orderModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Create Multi-Item Order</h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <form id="modalOrderForm" onsubmit="submitMultiOrder(event)" class="flex-grow flex flex-col">
+                <div class="p-6 flex-grow overflow-y-auto">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
+                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. #12345">
+                    </div>
+                    <hr class="my-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="font-semibold">Order Items</h3>
+                        <button type="button" onclick="addSkuRow()" class="bg-gray-200 text-gray-700 text-xs font-bold py-1 px-3 rounded hover:bg-gray-300">+ Add Item</button>
+                    </div>
+                    <div id="skuRowsContainer" class="space-y-4">
+                        <!-- SKU rows will be injected here by JS -->
+                    </div>
+                </div>
+                <div class="p-4 bg-gray-50 border-t">
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                        Submit Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FLOATING ACTION BUTTON (Alternative to the button in the column) -->
+    <!-- <button onclick="openModal()" class="fixed bottom-8 right-8 bg-blue-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-4xl hover:bg-blue-700 transition z-40">
+        +
+    </button> -->
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // 1. STATE MANAGEMENT
+        let orders = JSON.parse(localStorage.getItem('simpleTrackerOrders')) || [];
+        let skuMaster = JSON.parse(localStorage.getItem('simpleTrackerSkuMaster')) || [];
+        let velocityChartInstance = null;
+        let hourlyChartInstance = null;
+        let dailyChartInstance = null;
+
+        let currentPage = 1;
+        const rowsPerPage = 20;
+        // 2. INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTable();
+            renderCharts();
+            renderSkuMaster();
+            applyInitialSkuMasterState();
+        });
+
+        // 3. ADD ORDER (MODAL LOGIC) - This replaces the old single-item form
+        function openModal() {
+            document.getElementById('orderModal').classList.remove('hidden');
+            const container = document.getElementById('skuRowsContainer');
+            if(container.children.length === 0) addSkuRow(); // Add first row by default
+            document.getElementById('modalCustomer').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('orderModal').classList.add('hidden');
+            document.getElementById('modalOrderForm').reset();
+            document.getElementById('skuRowsContainer').innerHTML = ''; // Clear rows
+        }
+
+        function addSkuRow() {
+            const container = document.getElementById('skuRowsContainer');
+            const div = document.createElement('div'); // This is a single SKU row
+            div.className = 'flex gap-3 items-start sku-row animate-fade-in';
+            div.innerHTML = `
+                <div class="flex-grow">
+                    <input type="text" name="sku" list="skuOptions" oninput="updateSkuDescDisplay(this)" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="SKU">
+                    <p class="text-xs text-blue-600 font-semibold mt-1 min-h-[1rem] sku-desc"></p>
+                </div>
+                <div class="w-24">
+                    <input type="number" name="qty" required min="1" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Qty">
+                </div>
+                <button type="button" onclick="removeSkuRow(this)" class="mt-2 text-red-400 hover:text-red-600 font-bold text-xl" title="Remove Item">&times;</button>
+            `; // The 'oninput' calls the updated function
+            container.appendChild(div);
+        }
+
+        function removeSkuRow(btn) {
+            btn.closest('.sku-row').remove();
+        }
+
+        function submitMultiOrder(e) {
+            e.preventDefault();
+            
+            const customer = document.getElementById('modalCustomer').value;
+            const rows = document.querySelectorAll('.sku-row');
+            const timestamp = new Date().toISOString(); // Single timestamp for all items in the order
+            const newOrders = [];
+
+            rows.forEach((row, index) => {
+                const skuInput = row.querySelector('input[name="sku"]');
+                const qtyInput = row.querySelector('input[name="qty"]');
+                
+                if(skuInput.value && qtyInput.value) {
+                    newOrders.push({
+                        id: Date.now() + index, // Ensure unique ID per row
+                        customer: customer,
+                        sku: skuInput.value.toUpperCase(),
+                        qty: parseInt(qtyInput.value),
+                        inTime: timestamp,
+                        outTime: null
+                    });
+                }
+            });
+
+            // Add all items to the main orders list
+            newOrders.forEach(o => orders.unshift(o));
+            
+            saveData();
+            closeModal();
+        }
+
+        // 4. COMPLETE ORDER (ORDER OUT)
+        function completeOrder(id) {
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                orders[orderIndex].outTime = new Date().toISOString();
+                saveData();
+            }
+        }
+
+        function cancelOrder(id) {
+            if (confirm("Are you sure you want to cancel this order?")) {
+                const orderIndex = orders.findIndex(o => o.id === id);
+                if (orderIndex > -1) {
+                    orders[orderIndex].status = 'CANCELLED';
+                    orders[orderIndex].outTime = new Date().toISOString();
+                    saveData();
+                }
+            }
+        }
+
+        // 5. RENDER TABLE
+        function getFilteredOrders() {
+            const searchInput = document.getElementById('searchInput');
+            const filterText = searchInput ? searchInput.value.toLowerCase() : '';
+            return orders.filter(order => {
+                const skuItem = skuMaster.find(s => s.code === order.sku);
+                const description = skuItem ? skuItem.desc : '';
+                const matchString = (order.customer + ' ' + order.sku + ' ' + description).toLowerCase();
+                return !filterText || matchString.includes(filterText);
+            });
+        }
+
+        function renderTable() {
+            renderStats();
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            let pending = 0;
+            // This first loop is only to get the total pending count for the badge, which is correct.
+            orders.forEach(order => {
+                const isComplete = order.outTime !== null;
+                const isCancelled = order.status === 'CANCELLED';
+                if(!isComplete && !isCancelled) pending++;
+            });
+            document.getElementById('pendingCount').innerText = `${pending} Pending`;
+
+            // Filter orders based on search text
+            const filteredOrders = getFilteredOrders();
+
+            // Paginate the filtered orders
+            const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages; // Adjust if current page is out of bounds
+            }
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const paginatedOrders = filteredOrders.slice(startIndex, startIndex + rowsPerPage);
+
+            // Render the rows for the current page
+            paginatedOrders.forEach(order => {
+                const tr = document.createElement('tr');
+                const isComplete = order.outTime !== null;
+                const isCancelled = order.status === 'CANCELLED';
+
+                // Lookup Description
+                const skuItem = skuMaster.find(s => s.code === order.sku);
+
+                // Calculate Duration
+                let durationDisplay = '-';
+                if (isCancelled) {
+                    durationDisplay = '<span class="text-gray-400 font-bold text-xs">CANCELLED</span>';
+                } else if (isComplete) {
+                    const start = new Date(order.inTime);
+                    const end = new Date(order.outTime);
+                    const diffMs = end - start;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+                    durationDisplay = `<span class="text-green-600 font-bold">${diffMins}m ${diffSecs}s</span>`;
+                }
+
+                // Format Time
+                const formatTime = (iso) => {
+                    if (!iso) return '-';
+                    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                };
+
+                if (isCancelled) tr.className = "bg-gray-100 opacity-60 text-gray-500";
+                else tr.className = isComplete ? "bg-gray-50 opacity-75" : "bg-white";
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${order.customer}</td>
+                    <td class="px-4 py-3"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
+                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px]" title="${skuItem ? skuItem.desc : ''}">${skuItem ? skuItem.desc : '-'}</td>
+                    <td class="px-4 py-3">${order.qty}</td>
+                    <td class="px-4 py-3 text-gray-500">${formatTime(order.inTime)}</td>
+                    <td class="px-4 py-3">${isComplete ? formatTime(order.outTime) + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : '<span class="text-yellow-600 text-xs animate-pulse">Processing...</span>')}</td>
+                    <td class="px-4 py-3 text-right">
+                        ${!isComplete && !isCancelled ? 
+                            `<div class="flex justify-end gap-2">
+                                <button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded shadow">Out</button>
+                                <button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow" title="Cancel">✕</button>
+                             </div>`
+                            : (isCancelled ? `<span class="text-red-400 text-xs italic">Cancelled</span>` : `<span class="text-gray-400 text-xs">Completed</span>`)
+                        }
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderPaginationControls(filteredOrders.length, totalPages);
+        }
+
+        function renderPaginationControls(totalItems, totalPages) {
+            const controlsContainer = document.getElementById('paginationControls');
+            controlsContainer.innerHTML = '';
+
+            if (totalItems === 0) {
+                controlsContainer.innerHTML = '<span>No results found.</span>';
+                return;
+            }
+
+            const startItem = (currentPage - 1) * rowsPerPage + 1;
+            const endItem = Math.min(startItem + rowsPerPage - 1, totalItems);
+
+            controlsContainer.innerHTML = `
+                <div>
+                    <span class="font-medium">Showing ${startItem} to ${endItem} of ${totalItems} results</span>
+                </div>
+                <div class="flex gap-2 items-center">
+                    <button onclick="changePage('prev')" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 border rounded bg-white disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                    <span class="font-medium">Page ${currentPage} of ${totalPages}</span>
+                    <button onclick="changePage('next')" ${currentPage >= totalPages ? 'disabled' : ''} class="px-3 py-1 border rounded bg-white disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                </div>
+            `;
+        }
+
+        function changePage(direction) {
+            const filteredOrders = getFilteredOrders();
+            const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
+
+            if (direction === 'prev' && currentPage > 1) {
+                currentPage--;
+            } else if (direction === 'next' && currentPage < totalPages) {
+                currentPage++;
+            }
+            renderTable();
+        }
+
+        function handleSearch() {
+            currentPage = 1;
+            renderTable();
+        }
+
+        // 6. RENDER DASHBOARD (CHARTS)
+        function renderCharts() {
+            // --- 1. Velocity Chart (Fast Moving SKUs) ---
+            const skuCounts = {};
+            orders.forEach(order => {
+                if (!skuCounts[order.sku]) skuCounts[order.sku] = 0;
+                skuCounts[order.sku] += order.qty;
+            });
+
+            const sortedSkus = Object.keys(skuCounts)
+                .map(sku => ({ sku, qty: skuCounts[sku] }))
+                .sort((a, b) => b.qty - a.qty)
+                .slice(0, 5); // Top 5
+
+            const velLabels = sortedSkus.map(i => i.sku);
+            const velData = sortedSkus.map(i => i.qty);
+
+            const ctxVel = document.getElementById('velocityChart').getContext('2d');
+            if (velocityChartInstance) velocityChartInstance.destroy();
+
+            velocityChartInstance = new Chart(ctxVel, {
+                type: 'bar',
+                data: {
+                    labels: velLabels,
+                    datasets: [{
+                        label: 'Total Units Sold',
+                        data: velData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // --- 2. Hourly Volume Chart ---
+            const hourCounts = new Array(24).fill(0);
+            orders.forEach(o => {
+                const d = new Date(o.inTime);
+                hourCounts[d.getHours()]++;
+            });
+            
+            const hourLabels = hourCounts.map((_, i) => `${i}:00`);
+            const ctxHour = document.getElementById('hourlyChart').getContext('2d');
+            if (hourlyChartInstance) hourlyChartInstance.destroy();
+
+            hourlyChartInstance = new Chart(ctxHour, {
+                type: 'line',
+                data: {
+                    labels: hourLabels,
+                    datasets: [{
+                        label: 'Orders In',
+                        data: hourCounts,
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // --- 3. Daily Volume Chart ---
+            const dailyCounts = {};
+            orders.forEach(o => {
+                const dateStr = new Date(o.inTime).toLocaleDateString();
+                dailyCounts[dateStr] = (dailyCounts[dateStr] || 0) + 1;
+            });
+
+            const sortedDates = Object.keys(dailyCounts).sort((a,b) => new Date(a) - new Date(b));
+            const dailyData = sortedDates.map(d => dailyCounts[d]);
+
+            const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+            if (dailyChartInstance) dailyChartInstance.destroy();
+
+            dailyChartInstance = new Chart(ctxDaily, {
+                type: 'bar',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'Orders per Day',
+                        data: dailyData,
+                        backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // 7. UTILITIES
+        function saveData() {
+            localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
+            renderTable();
+            renderCharts();
+        }
+
+        function clearData() {
+            if(confirm("Are you sure you want to clear all data? This cannot be undone.")) {
+                localStorage.removeItem('simpleTrackerOrders');
+                orders = [];
+                renderTable();
+                renderCharts();
+            }
+        }
+
+        function renderStats() {
+            const total = orders.length;
+            const cancelled = orders.filter(o => o.status === 'CANCELLED').length;
+            const pending = orders.filter(o => !o.outTime && o.status !== 'CANCELLED').length;
+            const completed = orders.filter(o => o.outTime && o.status !== 'CANCELLED').length;
+            
+            const now = new Date();
+            const overdue = orders.filter(o => {
+                if (o.status === 'CANCELLED') return false;
+                const start = new Date(o.inTime);
+                const end = o.outTime ? new Date(o.outTime) : now;
+                const diffMins = (end - start) / 60000;
+                return diffMins > 30;
+            }).length;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statPending').innerText = pending;
+            document.getElementById('statCompleted').innerText = completed;
+            document.getElementById('statOverdue').innerText = overdue;
+            document.getElementById('statCancelled').innerText = cancelled;
+        }
+
+        // 8. SKU MASTER FUNCTIONS
+        function addSkuToMaster(e) {
+            e.preventDefault();
+            const code = document.getElementById('newSkuCode').value.toUpperCase();
+            const desc = document.getElementById('newSkuDesc').value;
+
+            if (!code || !desc) return; // Don't add empty entries
+
+            const existingSkuIndex = skuMaster.findIndex(s => s.code === code);
+
+            if (existingSkuIndex > -1) {
+                // Update existing SKU's description
+                skuMaster[existingSkuIndex].desc = desc;
+            } else {
+                // Add as a new SKU
+                skuMaster.push({ code, desc });
+            }
+
+            localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+            
+            document.getElementById('newSkuCode').value = '';
+            document.getElementById('newSkuDesc').value = '';
+            renderSkuMaster();
+        }
+
+        function deleteSkuFromMaster(code) {
+            if (confirm(`Delete SKU ${code}?`)) {
+                skuMaster = skuMaster.filter(s => s.code !== code);
+                localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+                renderSkuMaster();
+            }
+        }
+
+        function renderSkuMaster() {
+            const list = document.getElementById('skuMasterList');
+            const dataList = document.getElementById('skuOptions');
+            list.innerHTML = '';
+            dataList.innerHTML = '';
+
+            skuMaster.forEach(s => {
+                // List Item
+                list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-2 rounded">
+                    <span><b>${s.code}</b>: ${s.desc}</span>
+                    <button onclick="deleteSkuFromMaster('${s.code}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕</button>
+                </li>`;
+                // Datalist Option
+                dataList.innerHTML += `<option value="${s.code}">${s.desc}</option>`;
+            });
+        }
+
+        function updateSkuDescDisplay(input) { // Accepts the input element that triggered the event
+            const val = input.value.toUpperCase();
+            const match = skuMaster.find(s => s.code === val);
+            // Find the description paragraph relative to the input
+            const descEl = input.parentElement.querySelector('.sku-desc');
+            if (descEl) descEl.textContent = match ? match.desc : '';
+        }
+
+        function uploadSkuList(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let addedCount = 0;
+                let updatedCount = 0;
+
+                lines.forEach(line => {
+                    // Simple CSV Parse: Code, Description
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const code = parts[0].trim().toUpperCase();
+                        const desc = parts.slice(1).join(',').trim();
+                        
+                        if (code && desc) {
+                            const existingSkuIndex = skuMaster.findIndex(s => s.code === code);
+
+                            if (existingSkuIndex > -1) {
+                                // Update existing SKU
+                                skuMaster[existingSkuIndex].desc = desc;
+                                updatedCount++;
+                            } else {
+                                // Add new SKU
+                                skuMaster.push({ code, desc });
+                                addedCount++;
+                            }
+                        }
+                    }
+                });
+
+                localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+                renderSkuMaster();
+                alert(`Upload complete. Added: ${addedCount} new SKUs. Updated: ${updatedCount} existing SKUs.`);
+                input.value = ''; // Reset
+            };
+            reader.readAsText(file);
+        }
+
+        // 8.5 ORDER UPLOAD FUNCTIONS
+        function downloadOrderSample() {
+            const headers = "Order Number,SKU,Description,Quantity,Date (YYYY-MM-DD HH:MM)\n";
+            const sample = "ORD-001,A-001,Blue Widget,5,2023-10-25 08:30\nORD-002,B-005,Red Gadget,2,2023-10-25 09:15";
+            const blob = new Blob([headers + sample], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'order_import_template.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function exportToExcel() {
+            // 1. Prepare Summary Data
+            const summaryData = [
+                ["Metric", "Value"],
+                ["Total Orders", document.getElementById('statTotal').innerText],
+                ["In Process", document.getElementById('statPending').innerText],
+                ["Completed", document.getElementById('statCompleted').innerText],
+                ["Overdue (>30m)", document.getElementById('statOverdue').innerText],
+                ["Cancelled", document.getElementById('statCancelled').innerText],
+                ["Generated On", new Date().toLocaleString()]
+            ];
+
+            // 2. Prepare Order List Data
+            const orderData = orders.map(o => {
+                const skuItem = skuMaster.find(s => s.code === o.sku);
+                const durationMs = o.outTime ? new Date(o.outTime) - new Date(o.inTime) : 0;
+                const durationMins = durationMs > 0 ? (durationMs / 60000).toFixed(1) : '';
+                
+                return {
+                    "Order ID": o.customer,
+                    "SKU": o.sku,
+                    "Description": skuItem ? skuItem.desc : '',
+                    "Qty": o.qty,
+                    "In Time": o.inTime ? new Date(o.inTime).toLocaleString() : '',
+                    "Out Time": o.outTime ? new Date(o.outTime).toLocaleString() : '',
+                    "Status": o.status === 'CANCELLED' ? 'CANCELLED' : (o.outTime ? 'Completed' : 'Pending'),
+                    "Duration (Mins)": durationMins
+                };
+            });
+
+            // 3. Prepare Chart Data (Velocity)
+            const skuCounts = {};
+            orders.forEach(order => {
+                if (!skuCounts[order.sku]) skuCounts[order.sku] = 0;
+                skuCounts[order.sku] += order.qty;
+            });
+            const velocityData = Object.keys(skuCounts).map(sku => ({ SKU: sku, "Total Qty": skuCounts[sku] })).sort((a,b) => b["Total Qty"] - a["Total Qty"]);
+
+            // 4. Prepare Chart Data (Hourly)
+            const hourCounts = new Array(24).fill(0).map((_, i) => ({ Hour: `${i}:00`, "Orders": 0 }));
+            orders.forEach(o => {
+                const h = new Date(o.inTime).getHours();
+                hourCounts[h]["Orders"]++;
+            });
+
+            // 5. Prepare Chart Data (Daily)
+            const dailyCounts = {};
+            orders.forEach(o => {
+                const d = new Date(o.inTime).toLocaleDateString();
+                dailyCounts[d] = (dailyCounts[d] || 0) + 1;
+            });
+            const dailyData = Object.keys(dailyCounts).map(d => ({ Date: d, "Orders": dailyCounts[d] }));
+
+            // Create Workbook and Append Sheets
+            const wb = XLSX.utils.book_new();
+            const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            const wsOrders = XLSX.utils.json_to_sheet(orderData);
+            const wsVelocity = XLSX.utils.json_to_sheet(velocityData);
+            const wsHourly = XLSX.utils.json_to_sheet(hourCounts);
+            const wsDaily = XLSX.utils.json_to_sheet(dailyData);
+
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+            XLSX.utils.book_append_sheet(wb, wsOrders, "Order List");
+            XLSX.utils.book_append_sheet(wb, wsVelocity, "SKU Velocity");
+            XLSX.utils.book_append_sheet(wb, wsHourly, "Hourly Volume");
+            XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Volume");
+
+            // Export
+            XLSX.writeFile(wb, `CCE_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function uploadOrderList(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let addedCount = 0;
+
+                // Skip header if first line contains "Order" or "SKU"
+                const startIndex = (lines[0] && (lines[0].toLowerCase().includes('order') || lines[0].toLowerCase().includes('sku'))) ? 1 : 0;
+
+                for (let i = startIndex; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    // Expected: Order #, SKU, Description, Qty, Date
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const customer = parts[0].trim();
+                        const sku = parts[1].trim().toUpperCase();
+                        const desc = parts[2] ? parts[2].trim() : '';
+                        const qty = parts[3] ? parseInt(parts[3].trim()) : 1;
+                        const dateStr = parts[4] ? parts[4].trim() : '';
+                        
+                        let inTime = new Date().toISOString();
+                        if (dateStr) {
+                            const parsedDate = new Date(dateStr);
+                            if (!isNaN(parsedDate)) inTime = parsedDate.toISOString();
+                        }
+
+                        if (customer && sku) {
+                            // Update SKU Master if description is provided
+                            if (desc) {
+                                const existingIndex = skuMaster.findIndex(s => s.code === sku);
+                                if (existingIndex > -1) {
+                                    skuMaster[existingIndex].desc = desc;
+                                } else {
+                                    skuMaster.push({ code: sku, desc: desc });
+                                }
+                                localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+                            }
+
+                            orders.unshift({
+                                id: Date.now() + Math.random(), // Unique ID
+                                customer,
+                                sku,
+                                qty: isNaN(qty) ? 1 : qty,
+                                inTime,
+                                outTime: null
+                            });
+                            addedCount++;
+                        }
+                    }
+                }
+                
+                saveData();
+                renderSkuMaster();
+                alert(`Successfully imported ${addedCount} orders.`);
+                input.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // 9. UI TOGGLES
+        function applyInitialSkuMasterState() {
+            const content = document.getElementById('skuMasterContent');
+            const btn = document.getElementById('toggleSkuMasterBtn');
+            const isHidden = localStorage.getItem('skuMasterHidden') === 'true';
+
+            if (isHidden) {
+                content.classList.add('hidden');
+                btn.textContent = '[Show]';
+            } else {
+                content.classList.remove('hidden');
+                btn.textContent = '[Hide]';
+            }
+        }
+
+        function toggleSkuMaster() {
+            const content = document.getElementById('skuMasterContent');
+            const btn = document.getElementById('toggleSkuMasterBtn');
+            content.classList.toggle('hidden');
+            const isHidden = content.classList.contains('hidden');
+            btn.textContent = isHidden ? '[Show]' : '[Hide]';
+            localStorage.setItem('skuMasterHidden', String(isHidden));
+        }
+    </script>
+</body>
+</html>
