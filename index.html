@@ -12,6 +12,26 @@
     <!-- 3. Excel Export Library (SheetJS via CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: 'var(--primary-50)',
+                            100: 'var(--primary-100)',
+                            200: 'var(--primary-200)',
+                            500: 'var(--primary-500)',
+                            600: 'var(--primary-600)',
+                            700: 'var(--primary-700)',
+                            800: 'var(--primary-800)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
@@ -20,6 +40,33 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
+        :root {
+            --primary-50: #eff6ff;
+            --primary-100: #dbeafe;
+            --primary-200: #bfdbfe;
+            --primary-500: #3b82f6;
+            --primary-600: #2563eb;
+            --primary-700: #1d4ed8;
+            --primary-800: #1e40af;
+        }
+        body.theme-pink {
+            --primary-50: #fdf2f8;
+            --primary-100: #fce7f3;
+            --primary-200: #fbcfe8;
+            --primary-500: #ec4899;
+            --primary-600: #db2777;
+            --primary-700: #be185d;
+            --primary-800: #9d174d;
+        }
+        body.theme-teal {
+            --primary-50: #f0fdfa;
+            --primary-100: #ccfbf1;
+            --primary-200: #99f6e4;
+            --primary-500: #14b8a6;
+            --primary-600: #0d9488;
+            --primary-700: #0f766e;
+            --primary-800: #115e59;
+        }
     </style>
 </head>
 <body class="p-6">
@@ -32,14 +79,14 @@
             <form id="loginForm">
                 <div class="mb-4">
                     <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                    <input type="text" id="username" name="username" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" value="admin">
+                    <input type="text" id="username" name="username" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" value="admin">
                 </div>
                 <div class="mb-6">
                     <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <input type="password" id="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" value="admin123">
+                    <input type="password" id="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" value="admin123">
                 </div>
                 <p id="loginError" class="text-red-500 text-sm text-center mb-4 h-5"></p>
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                <button type="submit" class="w-full bg-primary-600 text-white font-bold py-2 px-4 rounded hover:bg-primary-700 transition">
                     Login
                 </button>
             </form>
@@ -52,18 +99,19 @@
         <div class="mb-8 flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
-                <p class="text-gray-500 text-sm">Manual Entry System • Local Storage Enabled</p>
+                <p class="text-gray-500 text-sm">BeautyCon 2026 | Manual Entry System</p>
             </div>
             <div class="flex gap-4 items-center">
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
                 <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
-                <button onclick="handleLogout()" class="text-blue-500 text-sm hover:underline">Logout</button>
+                <button onclick="toggleTheme()" class="text-gray-500 text-sm hover:underline" id="themeBtn">🎨 Theme</button>
+                <button onclick="handleLogout()" class="text-primary-500 text-sm hover:underline">Logout</button>
             </div>
         </div>
     
         <!-- SUMMARY CARDS -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            <div class="card p-4 border-l-4 border-blue-500">
+            <div class="card p-4 border-l-4 border-primary-500">
             <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
             <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
         </div>
@@ -94,17 +142,17 @@
                 <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <h2 class="text-lg font-bold text-gray-700">⏱️ Active Order Tracker</h2>
                     <div class="flex items-center gap-2 w-full md:w-auto">
-                        <div id="bulkActions" class="hidden items-center gap-2 mr-2 bg-blue-50 px-2 py-1 rounded border border-blue-100 animate-fade-in">
-                            <span class="text-xs font-bold text-blue-800"><span id="bulkCount">0</span> Selected</span>
+                        <div id="bulkActions" class="hidden items-center gap-2 mr-2 bg-primary-50 px-2 py-1 rounded border border-primary-100 animate-fade-in">
+                            <span class="text-xs font-bold text-primary-800"><span id="bulkCount">0</span> Selected</span>
                             <button onclick="performBulkAction('complete')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded shadow-sm">Complete</button>
                             <button onclick="performBulkAction('cancel')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded shadow-sm">Cancel</button>
                         </div>
                         <div class="flex gap-1">
                             <button onclick="downloadOrderSample()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1.5 rounded border border-gray-300 flex items-center gap-1 whitespace-nowrap" title="Download Template">📄 Sample</button>
-                            <button onclick="document.getElementById('orderUploadInput').click()" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1.5 rounded border border-blue-200 flex items-center gap-1 whitespace-nowrap" title="Import CSV">📥 Import</button>
+                            <button onclick="document.getElementById('orderUploadInput').click()" class="text-xs bg-primary-100 hover:bg-primary-200 text-primary-700 px-2 py-1.5 rounded border border-primary-200 flex items-center gap-1 whitespace-nowrap" title="Import CSV">📥 Import</button>
                             <input type="file" id="orderUploadInput" accept=".csv" onchange="uploadOrderList(this)" class="hidden">
                         </div>
-                        <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="🔍 Search by Order #, SKU, or Description..." class="w-full md:w-64 border border-gray-300 rounded-md p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="🔍 Search by Order #, SKU, Brand, or Description..." class="w-full md:w-64 border border-gray-300 rounded-md p-1.5 text-sm focus:ring-primary-500 focus:border-primary-500">
                         <span id="pendingCount" class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded whitespace-nowrap">0 Pending</span>
                     </div>
                 </div>
@@ -112,13 +160,14 @@
                     <table class="min-w-full text-left text-sm whitespace-nowrap">
                         <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-100 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="px-4 py-3 w-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"></th>
-                                <th class="px-4 py-3">Order #</th>
-                                <th class="px-4 py-3">SKU</th>
-                                <th class="px-4 py-3">Description</th>
-                                <th class="px-4 py-3">Qty</th>
-                                <th class="px-4 py-3">In Time</th>
-                                <th class="px-4 py-3">Out Time / Duration</th>
+                                <th class="px-4 py-3 w-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('customer')">Order # <span id="sort-customer" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('sku')">SKU <span id="sort-sku" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('brand')">Brand <span id="sort-brand" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('description')">Description <span id="sort-description" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('qty')">Qty <span id="sort-qty" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('inTime')">In Time <span id="sort-inTime" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('outTime')">Out Time / Duration <span id="sort-outTime" class="sort-icon text-gray-400">↕</span></th>
                                 <th class="px-4 py-3 text-right">Action</th>
                             </tr>
                         </thead>
@@ -136,7 +185,7 @@
 
         <!-- RIGHT COLUMN: CHARTS & CONTROLS -->
         <div class="space-y-6">
-            <button onclick="openModal()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition flex items-center justify-center text-xl">
+            <button onclick="openModal()" class="w-full bg-primary-600 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:bg-primary-700 transition flex items-center justify-center text-xl">
                 <span class="text-2xl mr-3">+</span> Create New Order
             </button>
 
@@ -154,11 +203,17 @@
                         <canvas id="hourlyChart"></canvas>
                     </div>
                 </div>
-            </div>
-            <div class="card p-6">
-                <h2 class="text-lg font-bold mb-2 text-gray-700"> Daily Volume</h2>
-                <div class="h-48">
-                    <canvas id="dailyChart"></canvas>
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">🏆 Top Brands</h2>
+                    <div class="h-48">
+                        <canvas id="brandChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">📅 Daily Volume</h2>
+                    <div class="h-48">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -166,17 +221,18 @@
             <div class="card p-6 h-fit">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-gray-700">📚 SKU Master List</h2>
-                    <button id="toggleSkuMasterBtn" onclick="toggleSkuMaster()" class="text-sm text-blue-600 hover:underline">[Hide]</button>
+                    <button id="toggleSkuMasterBtn" onclick="toggleSkuMaster()" class="text-sm text-primary-600 hover:underline">[Hide]</button>
                 </div>
                 <div id="skuMasterContent">
                     <div class="mb-4 pb-4 border-b border-gray-100">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bulk Upload (CSV)</label>
-                        <input type="file" accept=".csv" onchange="uploadSkuList(this)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                        <p class="text-xs text-gray-400 mt-1">Format: SKU, Description (One per line)</p>
+                        <input type="file" accept=".csv" onchange="uploadSkuList(this)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"/>
+                        <p class="text-xs text-gray-400 mt-1">Format: SKU, Description, Brand (One per line)</p>
                     </div>
                     <form onsubmit="addSkuToMaster(event)" class="mb-4">
                         <input type="text" id="newSkuCode" required class="w-full border rounded p-2 text-sm mb-2" placeholder="SKU Code (e.g. A-001)">
                         <input type="text" id="newSkuDesc" required class="w-full border rounded p-2 text-sm mb-2" placeholder="Description (e.g. Blue Widget)">
+                        <input type="text" id="newSkuBrand" class="w-full border rounded p-2 text-sm mb-2" placeholder="Brand Name (Optional)">
                         <button type="submit" class="w-full bg-gray-600 text-white text-sm font-bold py-2 rounded hover:bg-gray-700">Add to Master</button>
                     </form>
                     <div class="max-h-48 overflow-y-auto border-t pt-2">
@@ -198,7 +254,7 @@
                 <div class="p-6 flex-grow overflow-y-auto">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
-                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. #12345">
+                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="e.g. #12345">
                     </div>
                     <hr class="my-4">
                     <div class="flex justify-between items-center mb-2">
@@ -210,7 +266,7 @@
                     </div>
                 </div>
                 <div class="p-4 bg-gray-50 border-t">
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                    <button type="submit" class="w-full bg-primary-600 text-white font-bold py-2 px-4 rounded hover:bg-primary-700 transition">
                         Submit Order
                     </button>
                 </div>
@@ -234,7 +290,9 @@
         let selectedOrderIds = new Set();
         let hourlyChartInstance = null;
         let dailyChartInstance = null;
+        let brandChartInstance = null;
         let liveDurationInterval = null;
+        let currentSort = { column: 'inTime', direction: 'desc' };
         
         let currentPage = 1;
         let rowsPerPage = 20; // Changed to let
@@ -243,6 +301,14 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
             checkLoginState();
+            
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'pink') {
+                document.body.classList.add('theme-pink');
+            } else if (savedTheme === 'teal') {
+                document.body.classList.add('theme-teal');
+            }
         });
 
         function checkLoginState() {
@@ -295,6 +361,22 @@
             if (liveDurationInterval) clearInterval(liveDurationInterval);
             liveDurationInterval = setInterval(updateLiveDurations, 1000);
         }
+        
+        function toggleTheme() {
+            const body = document.body;
+            if (body.classList.contains('theme-pink')) {
+                body.classList.remove('theme-pink');
+                body.classList.add('theme-teal');
+                localStorage.setItem('theme', 'teal');
+            } else if (body.classList.contains('theme-teal')) {
+                body.classList.remove('theme-teal');
+                localStorage.setItem('theme', 'default');
+            } else {
+                body.classList.add('theme-pink');
+                localStorage.setItem('theme', 'pink');
+            }
+            renderCharts(); // Update chart colors
+        }
 
         // 3. ADD ORDER (MODAL LOGIC) - This replaces the old single-item form
         function openModal() {
@@ -316,11 +398,12 @@
             div.className = 'flex gap-3 items-start sku-row animate-fade-in';
             div.innerHTML = `
                 <div class="flex-grow">
-                    <input type="text" name="sku" list="skuOptions" oninput="updateSkuDescDisplay(this)" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="SKU">
-                    <p class="text-xs text-blue-600 font-semibold mt-1 min-h-[1rem] sku-desc"></p>
+                    <input type="text" name="sku" list="skuOptions" oninput="updateSkuDescDisplay(this)" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="SKU">
+                    <p class="text-xs text-primary-600 font-semibold mt-1 min-h-[1rem] sku-desc"></p>
+                    <p class="text-xs text-gray-500 mt-1 min-h-[1rem] sku-brand"></p>
                 </div>
                 <div class="w-24">
-                    <input type="number" name="qty" required min="1" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Qty">
+                    <input type="number" name="qty" required min="1" class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Qty">
                 </div>
                 <button type="button" onclick="removeSkuRow(this)" class="mt-2 text-red-400 hover:text-red-600 font-bold text-xl" title="Remove Item">&times;</button>
             `; // The 'oninput' calls the updated function
@@ -386,12 +469,45 @@
         function getFilteredOrders() {
             const searchInput = document.getElementById('searchInput');
             const filterText = searchInput ? searchInput.value.toLowerCase() : '';
-            return orders.filter(order => {
+            
+            // Filter
+            const filtered = orders.filter(order => {
                 const skuItem = skuMaster.find(s => s.code === order.sku);
                 const description = skuItem ? skuItem.desc : '';
-                const matchString = (order.customer + ' ' + order.sku + ' ' + description).toLowerCase();
+                const brand = skuItem ? (skuItem.brand || '') : '';
+                const matchString = (order.customer + ' ' + order.sku + ' ' + description + ' ' + brand).toLowerCase();
                 return !filterText || matchString.includes(filterText);
             });
+
+            // Sort
+            filtered.sort((a, b) => {
+                let valA, valB;
+                if (currentSort.column === 'brand') {
+                    const itemA = skuMaster.find(s => s.code === a.sku);
+                    const itemB = skuMaster.find(s => s.code === b.sku);
+                    valA = itemA ? (itemA.brand || '') : '';
+                    valB = itemB ? (itemB.brand || '') : '';
+                } else if (currentSort.column === 'description') {
+                    const itemA = skuMaster.find(s => s.code === a.sku);
+                    const itemB = skuMaster.find(s => s.code === b.sku);
+                    valA = itemA ? (itemA.desc || '') : '';
+                    valB = itemB ? (itemB.desc || '') : '';
+                } else {
+                    valA = a[currentSort.column];
+                    valB = b[currentSort.column];
+                }
+
+                if (valA == null) valA = '';
+                if (valB == null) valB = '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            return filtered;
         }
 
         function renderTable() {
@@ -422,6 +538,19 @@
             // Filter orders based on search text
             const filteredOrders = getFilteredOrders();
 
+            // Update Sort Icons
+            document.querySelectorAll('.sort-icon').forEach(el => {
+                el.innerText = '↕';
+                el.classList.add('text-gray-400');
+                el.classList.remove('text-primary-600', 'font-bold');
+            });
+            const activeSortIcon = document.getElementById(`sort-${currentSort.column}`);
+            if (activeSortIcon) {
+                activeSortIcon.innerText = currentSort.direction === 'asc' ? '↑' : '↓';
+                activeSortIcon.classList.remove('text-gray-400');
+                activeSortIcon.classList.add('text-primary-600', 'font-bold');
+            }
+
             // Paginate the filtered orders
             const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
             if (currentPage > totalPages && totalPages > 0) {
@@ -448,6 +577,12 @@
                 // Lookup Description
                 const skuItem = skuMaster.find(s => s.code === order.sku);
 
+                // Prepare title attribute for hover
+                const descriptionText = skuItem ? skuItem.desc : '';
+                const brandText = skuItem && skuItem.brand ? `\nBrand: ${skuItem.brand}` : '';
+                const titleText = `${descriptionText}${brandText}`;
+                const displayBrand = skuItem ? (skuItem.brand || '-') : '-';
+
                 // Calculate Duration
                 let durationDisplay = '-';
                 if (isCancelled) {
@@ -464,7 +599,11 @@
                 // Format Time
                 const formatTime = (iso) => {
                     if (!iso) return '-';
-                    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const date = new Date(iso);
+                    const now = new Date();
+                    const isToday = date.toDateString() === now.toDateString();
+                    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    return isToday ? timeStr : `${date.toLocaleDateString()} ${timeStr}`;
                 };
 
                 if (isCancelled) tr.className = "bg-gray-100 opacity-60 text-gray-500";
@@ -472,11 +611,12 @@
 
                 tr.innerHTML = `
                     <td class="px-4 py-3">
-                        <input type="checkbox" onchange="toggleOrderSelection(${order.id})" ${isSelected ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <input type="checkbox" onchange="toggleOrderSelection(${order.id})" ${isSelected ? 'checked' : ''} class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                     </td>
                     <td class="px-4 py-3 font-medium text-gray-900">${order.customer}</td>
-                    <td class="px-4 py-3"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-blue-100 text-blue-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
-                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px]" title="${skuItem ? skuItem.desc : ''}">${skuItem ? skuItem.desc : '-'}</td>
+                    <td class="px-4 py-3"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
+                    <td class="px-4 py-3 text-gray-600 text-xs">${displayBrand}</td>
+                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px]" title="${titleText}">${descriptionText || '-'}</td>
                     <td class="px-4 py-3">${order.qty}</td>
                     <td class="px-4 py-3 text-gray-500">${formatTime(order.inTime)}</td>
                     <td class="px-4 py-3">${isComplete ? formatTime(order.outTime) + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
@@ -513,6 +653,17 @@
                     }
                 }
             });
+        }
+
+        // 5.2 SORTING
+        function handleSort(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            renderTable();
         }
 
         // 5.5 BULK ACTIONS
@@ -628,6 +779,13 @@
             const velLabels = sortedSkus.map(i => i.sku);
             const velData = sortedSkus.map(i => i.qty);
 
+            let themeColor = { bg: 'rgba(59, 130, 246, 0.6)', border: 'rgba(59, 130, 246, 1)' }; // Default Blue
+            if (document.body.classList.contains('theme-pink')) {
+                themeColor = { bg: 'rgba(236, 72, 153, 0.6)', border: 'rgba(236, 72, 153, 1)' }; // Pink
+            } else if (document.body.classList.contains('theme-teal')) {
+                themeColor = { bg: 'rgba(20, 184, 166, 0.6)', border: 'rgba(20, 184, 166, 1)' }; // Teal
+            }
+
             const ctxVel = document.getElementById('velocityChart').getContext('2d');
             if (velocityChartInstance) velocityChartInstance.destroy();
 
@@ -638,8 +796,8 @@
                     datasets: [{
                         label: 'Total Units Sold',
                         data: velData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: themeColor.bg,
+                        borderColor: themeColor.border,
                         borderWidth: 1
                     }]
                 },
@@ -714,6 +872,52 @@
                     scales: { y: { beginAtZero: true } }
                 }
             });
+
+            // --- 4. Brand Chart (Doughnut) ---
+            const brandCounts = {};
+            orders.forEach(order => {
+                const skuItem = skuMaster.find(s => s.code === order.sku);
+                const brand = (skuItem && skuItem.brand) ? skuItem.brand : 'Unbranded';
+                if (!brandCounts[brand]) brandCounts[brand] = 0;
+                brandCounts[brand] += order.qty;
+            });
+
+            let sortedBrands = Object.keys(brandCounts)
+                .map(brand => ({ brand, qty: brandCounts[brand] }))
+                .sort((a, b) => b.qty - a.qty);
+
+            if (sortedBrands.length > 10) {
+                const othersQty = sortedBrands.slice(10).reduce((acc, curr) => acc + curr.qty, 0);
+                sortedBrands = sortedBrands.slice(0, 10);
+                sortedBrands.push({ brand: 'Others', qty: othersQty });
+            }
+
+            const brandLabels = sortedBrands.map(b => b.brand);
+            const brandData = sortedBrands.map(b => b.qty);
+            
+            const ctxBrand = document.getElementById('brandChart').getContext('2d');
+            if (brandChartInstance) brandChartInstance.destroy();
+            
+            brandChartInstance = new Chart(ctxBrand, {
+                type: 'doughnut',
+                data: {
+                    labels: brandLabels,
+                    datasets: [{
+                        label: 'Units',
+                        data: brandData,
+                        backgroundColor: [
+                            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6',
+                            '#f97316', '#06b6d4', '#84cc16', '#64748b'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
         }
 
         // 7. UTILITIES
@@ -778,6 +982,12 @@
             document.getElementById('statCompleted').innerText = completed;
             document.getElementById('statOverdue').innerText = overdue;
             document.getElementById('statCancelled').innerText = cancelled;
+
+            const getPct = (val) => total > 0 ? Math.round((val / total) * 100) + '%' : '0%';
+            document.getElementById('statPendingPct').innerText = getPct(pending);
+            document.getElementById('statCompletedPct').innerText = getPct(completed);
+            document.getElementById('statOverduePct').innerText = getPct(overdue);
+            document.getElementById('statCancelledPct').innerText = getPct(cancelled);
         }
 
         // 8. SKU MASTER FUNCTIONS
@@ -785,6 +995,7 @@
             e.preventDefault();
             const code = document.getElementById('newSkuCode').value.toUpperCase();
             const desc = document.getElementById('newSkuDesc').value;
+            const brand = document.getElementById('newSkuBrand').value;
 
             if (!code || !desc) return; // Don't add empty entries
 
@@ -793,16 +1004,19 @@
             if (existingSkuIndex > -1) {
                 // Update existing SKU's description
                 skuMaster[existingSkuIndex].desc = desc;
+                skuMaster[existingSkuIndex].brand = brand;
             } else {
                 // Add as a new SKU
-                skuMaster.push({ code, desc });
+                skuMaster.push({ code, desc, brand });
             }
 
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
             
             document.getElementById('newSkuCode').value = '';
             document.getElementById('newSkuDesc').value = '';
+            document.getElementById('newSkuBrand').value = '';
             renderSkuMaster();
+            renderCharts(); // Update charts immediately
         }
 
         function deleteSkuFromMaster(code) {
@@ -810,6 +1024,7 @@
                 skuMaster = skuMaster.filter(s => s.code !== code);
                 localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
                 renderSkuMaster();
+                renderCharts(); // Update charts immediately
             }
         }
 
@@ -822,11 +1037,11 @@
             skuMaster.forEach(s => {
                 // List Item
                 list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span><b>${s.code}</b>: ${s.desc}</span>
+                    <span><b>${s.code}</b>: ${s.desc} <span class="text-gray-500 text-xs">${s.brand || ''}</span></span>
                     <button onclick="deleteSkuFromMaster('${s.code}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕</button>
                 </li>`;
                 // Datalist Option
-                dataList.innerHTML += `<option value="${s.code}">${s.desc}</option>`;
+                dataList.innerHTML += `<option value="${s.code}">${s.desc}${s.brand ? ` (${s.brand})` : ''}</option>`;
             });
         }
 
@@ -835,7 +1050,9 @@
             const match = skuMaster.find(s => s.code === val);
             // Find the description paragraph relative to the input
             const descEl = input.parentElement.querySelector('.sku-desc');
+            const brandEl = input.parentElement.querySelector('.sku-brand');
             if (descEl) descEl.textContent = match ? match.desc : '';
+            if (brandEl) brandEl.textContent = match ? (match.brand || '') : '';
         }
 
         function uploadSkuList(input) {
@@ -850,11 +1067,12 @@
                 let updatedCount = 0;
 
                 lines.forEach(line => {
-                    // Simple CSV Parse: Code, Description
+                    // Simple CSV Parse: Code, Description, Brand
                     const parts = line.split(',');
-                    if (parts.length >= 2) {
+                    if (parts.length >= 2) { // Still allow 2 parts for backward compatibility
                         const code = parts[0].trim().toUpperCase();
-                        const desc = parts.slice(1).join(',').trim();
+                        const desc = parts[1].trim();
+                        const brand = parts.length > 2 ? parts.slice(2).join(',').trim() : ''; // Handle commas in brand name
                         
                         if (code && desc) {
                             const existingSkuIndex = skuMaster.findIndex(s => s.code === code);
@@ -862,10 +1080,11 @@
                             if (existingSkuIndex > -1) {
                                 // Update existing SKU
                                 skuMaster[existingSkuIndex].desc = desc;
+                                skuMaster[existingSkuIndex].brand = brand;
                                 updatedCount++;
                             } else {
                                 // Add new SKU
-                                skuMaster.push({ code, desc });
+                                skuMaster.push({ code, desc, brand });
                                 addedCount++;
                             }
                         }
@@ -874,6 +1093,7 @@
 
                 localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
                 renderSkuMaster();
+                renderCharts(); // Update charts immediately
                 alert(`Upload complete. Added: ${addedCount} new SKUs. Updated: ${updatedCount} existing SKUs.`);
                 input.value = ''; // Reset
             };
@@ -916,6 +1136,7 @@
                 return {
                     "Order ID": o.customer,
                     "SKU": o.sku,
+                    "Brand": skuItem ? (skuItem.brand || '') : '',
                     "Description": skuItem ? skuItem.desc : '',
                     "Qty": o.qty,
                     "In Time": o.inTime ? new Date(o.inTime).toLocaleString() : '',
@@ -948,6 +1169,16 @@
             });
             const dailyData = Object.keys(dailyCounts).map(d => ({ Date: d, "Orders": dailyCounts[d] }));
 
+            // 6. Prepare Chart Data (Brand)
+            const brandCounts = {};
+            orders.forEach(o => {
+                const skuItem = skuMaster.find(s => s.code === o.sku);
+                const brand = skuItem && skuItem.brand ? skuItem.brand : 'Unbranded';
+                if(!brandCounts[brand]) brandCounts[brand] = 0;
+                brandCounts[brand] += o.qty;
+            });
+            const brandData = Object.keys(brandCounts).map(b => ({ Brand: b, "Total Qty": brandCounts[b] })).sort((a,b) => b["Total Qty"] - a["Total Qty"]);
+
             // Create Workbook and Append Sheets
             const wb = XLSX.utils.book_new();
             const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
@@ -955,12 +1186,14 @@
             const wsVelocity = XLSX.utils.json_to_sheet(velocityData);
             const wsHourly = XLSX.utils.json_to_sheet(hourCounts);
             const wsDaily = XLSX.utils.json_to_sheet(dailyData);
+            const wsBrand = XLSX.utils.json_to_sheet(brandData);
 
             XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
             XLSX.utils.book_append_sheet(wb, wsOrders, "Order List");
             XLSX.utils.book_append_sheet(wb, wsVelocity, "SKU Velocity");
             XLSX.utils.book_append_sheet(wb, wsHourly, "Hourly Volume");
             XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Volume");
+            XLSX.utils.book_append_sheet(wb, wsBrand, "Brand Volume");
 
             // Export
             XLSX.writeFile(wb, `CCE_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -975,6 +1208,10 @@
                 const text = e.target.result;
                 const lines = text.split('\n');
                 let addedCount = 0;
+                let skippedCount = 0;
+
+                // Create a set of existing "order-sku" combinations for efficient lookup to prevent duplicates
+                const existingOrderItems = new Set(orders.map(o => `${o.customer}|${o.sku}`));
 
                 // Skip header if first line contains "Order" or "SKU"
                 const startIndex = (lines[0] && (lines[0].toLowerCase().includes('order') || lines[0].toLowerCase().includes('sku'))) ? 1 : 0;
@@ -988,6 +1225,12 @@
                     if (parts.length >= 2) {
                         let customer = parts[0].trim();
                         let sku = parts[1].trim().toUpperCase();
+                        // --- DUPLICATE CHECK (Order # + SKU) ---
+                        const uniqueKey = `${customer}|${sku}`;
+                        if (existingOrderItems.has(uniqueKey)) {
+                            skippedCount++;
+                            continue; // Skip this line item as it's a duplicate
+                        }
                         let desc = '';
                         let qty = 1;
                         let dateStr = '';
@@ -1008,8 +1251,19 @@
                         
                         let inTime = new Date().toISOString();
                         if (dateStr) {
-                            const parsedDate = new Date(dateStr);
-                            if (!isNaN(parsedDate)) inTime = parsedDate.toISOString();
+                            let parsedDate = new Date(dateStr);
+                            
+                            // Fix for "Invalid Date" on formats like DD/MM/YYYY (common in CSVs outside US)
+                            if (isNaN(parsedDate.getTime())) {
+                                const dmyMatch = dateStr.match(/^(\d{1,2})\/\-\/\-(?:\s+(\d{1,2}):(\d{2}))?$/);
+                                if (dmyMatch) {
+                                    // Reconstruct date from parts: Year, Month (0-index), Day, Hour, Min
+                                    parsedDate = new Date(dmyMatch[3], dmyMatch[2] - 1, dmyMatch[1], dmyMatch[4] || 0, dmyMatch[5] || 0);
+                                }
+                            }
+
+                            // If valid, use it; otherwise defaults to NOW
+                            if (!isNaN(parsedDate.getTime())) inTime = parsedDate.toISOString();
                         }
 
                         if (customer && sku) {
@@ -1019,7 +1273,7 @@
                                 if (existingIndex > -1) {
                                     skuMaster[existingIndex].desc = desc;
                                 } else {
-                                    skuMaster.push({ code: sku, desc: desc });
+                                    skuMaster.push({ code: sku, desc: desc, brand: '' });
                                 }
                                 localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
                             }
@@ -1033,13 +1287,19 @@
                                 outTime: null
                             });
                             addedCount++;
+                            existingOrderItems.add(uniqueKey); // Add to set to handle duplicates within the same file
                         }
                     }
                 }
                 
                 saveData();
                 renderSkuMaster();
-                alert(`Successfully imported ${addedCount} orders.`);
+
+                let alertMessage = `Successfully imported ${addedCount} new order items.`;
+                if (skippedCount > 0) {
+                    alertMessage += `\nSkipped ${skippedCount} duplicate items (same Order # and SKU).`;
+                }
+                alert(alertMessage);
                 input.value = '';
             };
             reader.readAsText(file);
