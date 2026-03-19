@@ -24,21 +24,46 @@
 </head>
 <body class="p-6">
 
-    <!-- HEADER -->
-    <div class="mb-8 flex justify-between items-center">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
-            <p class="text-gray-500 text-sm">Manual Entry System • Local Storage Enabled</p>
-        </div>
-        <div class="flex gap-4 items-center">
-            <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
-            <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+        <div class="w-full max-w-sm p-8 bg-white rounded-lg shadow-md">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-2">📦 CCE Order Tracker</h1>
+            <p class="text-center text-gray-500 mb-6">Please sign in to continue</p>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" name="username" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" value="admin">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" value="password">
+                </div>
+                <p id="loginError" class="text-red-500 text-sm text-center mb-4 h-5"></p>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition">
+                    Login
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- SUMMARY CARDS -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div class="card p-4 border-l-4 border-blue-500">
+    <!-- MAIN APP CONTAINER (Initially Hidden) -->
+    <div id="app-container" class="hidden">
+        <!-- HEADER -->
+        <div class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
+                <p class="text-gray-500 text-sm">Manual Entry System • Local Storage Enabled</p>
+            </div>
+            <div class="flex gap-4 items-center">
+                <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
+                <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
+                <button onclick="handleLogout()" class="text-blue-500 text-sm hover:underline">Logout</button>
+            </div>
+        </div>
+    
+        <!-- SUMMARY CARDS -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <div class="card p-4 border-l-4 border-blue-500">
             <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
             <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
         </div>
@@ -187,29 +212,77 @@
         </div>
     </div>
 
-    <!-- FLOATING ACTION BUTTON (Alternative to the button in the column) -->
-    <!-- <button onclick="openModal()" class="fixed bottom-8 right-8 bg-blue-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-4xl hover:bg-blue-700 transition z-40">
-        +
-    </button> -->
+    </div> <!-- End of #app-container -->
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // 1. STATE MANAGEMENT
+        // 1. AUTH & STATE MANAGEMENT
+        // WARNING: This is NOT a secure login system. It's a simple UI lock for demonstration.
+        // Credentials are hardcoded and visible in the source code.
+        const DEMO_USERNAME = 'admin';
+        const DEMO_PASSWORD = 'password';
+
         let orders = JSON.parse(localStorage.getItem('simpleTrackerOrders')) || [];
         let skuMaster = JSON.parse(localStorage.getItem('simpleTrackerSkuMaster')) || [];
         let velocityChartInstance = null;
         let hourlyChartInstance = null;
         let dailyChartInstance = null;
-
+        
         let currentPage = 1;
-        const rowsPerPage = 20;
+        let rowsPerPage = 20; // Changed to let
+
         // 2. INITIALIZATION
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            checkLoginState();
+        });
+
+        function checkLoginState() {
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                showApp();
+            } else {
+                showLogin();
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+
+            if (username === DEMO_USERNAME && password === DEMO_PASSWORD) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                errorEl.textContent = '';
+                showApp();
+            } else {
+                errorEl.textContent = 'Invalid username or password.';
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('isLoggedIn');
+            showLogin();
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            // Initialize the app's content now that we are logged in
+            initializeApp();
+        }
+
+        function showLogin() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+        }
+
+        function initializeApp() {
             renderTable();
             renderCharts();
             renderSkuMaster();
             applyInitialSkuMasterState();
-        });
+        }
 
         // 3. ADD ORDER (MODAL LOGIC) - This replaces the old single-item form
         function openModal() {
@@ -847,5 +920,6 @@
             localStorage.setItem('skuMasterHidden', String(isHidden));
         }
     </script>
+
 </body>
 </html>
