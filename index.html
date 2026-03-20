@@ -158,15 +158,16 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="main-layout-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         <!-- LEFT COLUMN: LIST -->
-        <div class="space-y-6">
+        <div id="table-column" class="space-y-6 lg:col-span-1">
             <!-- ORDER TRACKER TABLE -->
             <div class="card overflow-hidden">
                 <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <h2 class="text-lg font-bold text-gray-700">⏱️ Active Order Tracker</h2>
                     <div class="flex items-center gap-2 w-full md:w-auto">
+                        <button onclick="toggleLayout()" id="layoutToggleBtn" title="Toggle Full-Width View" class="text-gray-500 hover:text-primary-600 p-2 rounded-md border bg-white shadow-sm">↔️</button>
                         <div id="bulkActions" class="hidden items-center gap-2 mr-2 bg-primary-50 px-2 py-1 rounded border border-primary-100 animate-fade-in">
                             <span class="text-xs font-bold text-primary-800"><span id="bulkCount">0</span> Selected</span>
                             <button onclick="performBulkAction('complete')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded shadow-sm">Complete</button>
@@ -186,15 +187,15 @@
                     <table class="min-w-full text-left text-sm whitespace-nowrap">
                         <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-100 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="px-4 py-3 w-4"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('customer')">Order # <span id="sort-customer" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('sku')">SKU <span id="sort-sku" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('brand')">Brand <span id="sort-brand" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('description')">Description <span id="sort-description" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('qty')">Qty <span id="sort-qty" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('inTime')">In Time <span id="sort-inTime" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none" onclick="handleSort('outTime')">Out Time / Duration <span id="sort-outTime" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 text-right">Action</th>
+                                <th class="px-4 py-3 w-4 border-l border-gray-200"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('customer')">Order # <span id="sort-customer" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('sku')">SKU <span id="sort-sku" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('brand')">Brand <span id="sort-brand" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('description')">Description <span id="sort-description" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('qty')">Qty <span id="sort-qty" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('inTime')">In Time <span id="sort-inTime" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('outTime')">Out Time / Duration <span id="sort-outTime" class="sort-icon text-gray-400">↕</span></th>
+                                <th class="px-4 py-3 text-right border-l border-gray-200">Action</th>
                             </tr>
                         </thead>
                         <tbody id="orderTableBody" class="divide-y divide-gray-200">
@@ -210,7 +211,7 @@
         </div>
 
         <!-- RIGHT COLUMN: CHARTS & CONTROLS -->
-        <div class="space-y-6">
+        <div id="dashboard-column" class="space-y-6">
             <button onclick="openModal()" class="w-full bg-primary-600 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:bg-primary-700 transition flex items-center justify-center text-xl">
                 <span class="text-2xl mr-3">+</span> Create New Order
             </button>
@@ -401,6 +402,7 @@
             renderCharts();
             renderSkuMaster();
             applyInitialSkuMasterState();
+            applyInitialLayoutState();
             
             if (liveDurationInterval) clearInterval(liveDurationInterval);
             liveDurationInterval = setInterval(updateLiveDurations, 1000);
@@ -429,6 +431,37 @@
                 brandMetric = value;
             }
             renderCharts();
+        }
+
+        function toggleLayout() {
+            const layoutContainer = document.getElementById('main-layout-container');
+            const tableColumn = document.getElementById('table-column');
+            const dashboardColumn = document.getElementById('dashboard-column');
+            
+            const isBecomingFullWidth = !layoutContainer.classList.contains('lg:grid-cols-1');
+
+            if (isBecomingFullWidth) {
+                layoutContainer.classList.remove('lg:grid-cols-2');
+                layoutContainer.classList.add('lg:grid-cols-1');
+                tableColumn.classList.add('lg:col-span-2');
+                dashboardColumn.classList.add('hidden');
+            } else {
+                layoutContainer.classList.remove('lg:grid-cols-1');
+                layoutContainer.classList.add('lg:grid-cols-2');
+                tableColumn.classList.remove('lg:col-span-2');
+                dashboardColumn.classList.remove('hidden');
+                // Re-render charts to fix sizing issues
+                setTimeout(() => renderCharts(), 50);
+            }
+            
+            localStorage.setItem('fullWidthView', isBecomingFullWidth);
+        }
+
+        function applyInitialLayoutState() {
+            const isFullWidth = localStorage.getItem('fullWidthView') === 'true';
+            if (isFullWidth) {
+                toggleLayout(); // Call toggle to set the initial state
+            }
         }
 
         // 3. ADD ORDER (MODAL LOGIC) - This replaces the old single-item form
@@ -655,6 +688,7 @@
             }
 
             // Render the rows for the current page
+            let rowIndex = 0;
             paginatedOrders.forEach(order => {
                 const tr = document.createElement('tr');
                 const isComplete = order.outTime !== null;
@@ -693,21 +727,29 @@
                     return isToday ? timeStr : `${date.toLocaleDateString()} ${timeStr}`;
                 };
 
-                if (isCancelled) tr.className = "bg-gray-100 opacity-60 text-gray-500";
-                else tr.className = isComplete ? "bg-gray-50 opacity-75" : "bg-white";
+                // Zebra striping and status styling
+                let classList = [];
+                classList.push(rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50');
+
+                if (isCancelled) {
+                    classList = ['bg-red-50', 'opacity-60', 'text-gray-500'];
+                } else if (isComplete) {
+                    classList.push('opacity-75');
+                }
+                tr.className = classList.join(' ');
 
                 tr.innerHTML = `
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 border-l border-gray-200">
                         <input type="checkbox" onchange="toggleOrderSelection(${order.id})" ${isSelected ? 'checked' : ''} class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                     </td>
-                    <td class="px-4 py-3 font-medium text-gray-900">${order.customer}</td>
-                    <td class="px-4 py-3"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
-                    <td class="px-4 py-3 text-gray-600 text-xs">${displayBrand}</td>
-                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px]" title="${titleText}">${descriptionText || '-'}</td>
-                    <td class="px-4 py-3">${order.qty}</td>
-                    <td class="px-4 py-3 text-gray-500">${formatTime(order.inTime)}</td>
-                    <td class="px-4 py-3">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-4 py-3 font-medium text-gray-900 border-l border-gray-200">${order.customer}</td>
+                    <td class="px-4 py-3 border-l border-gray-200"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
+                    <td class="px-4 py-3 text-gray-600 text-xs border-l border-gray-200">${displayBrand}</td>
+                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px] border-l border-gray-200" title="${titleText}">${descriptionText || '-'}</td>
+                    <td class="px-4 py-3 border-l border-gray-200">${order.qty}</td>
+                    <td class="px-4 py-3 text-gray-500 border-l border-gray-200">${formatTime(order.inTime)}</td>
+                    <td class="px-4 py-3 border-l border-gray-200">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
+                    <td class="px-4 py-3 text-right border-l border-gray-200">
                         <div class="flex justify-end items-center gap-2">
                             ${!isComplete && !isCancelled ? 
                                 `<button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded shadow">Out</button>
@@ -719,6 +761,7 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+                rowIndex++;
             });
 
             renderPaginationControls(filteredOrders.length, totalPages);
