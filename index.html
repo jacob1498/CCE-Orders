@@ -965,10 +965,18 @@
                 }
             });
 
+            // Create a map of distinct orders and their creation time for volume charts
+            const distinctOrdersByTime = {};
+            orders.forEach(o => {
+                if (!distinctOrdersByTime[o.customer]) {
+                    distinctOrdersByTime[o.customer] = o.inTime;
+                }
+            });
+
             // --- 2. Hourly Volume Chart ---
             const hourCounts = new Array(24).fill(0);
-            orders.forEach(o => {
-                const d = new Date(o.inTime);
+            Object.values(distinctOrdersByTime).forEach(inTime => {
+                const d = new Date(inTime);
                 hourCounts[d.getHours()]++;
             });
             
@@ -981,7 +989,7 @@
                 data: {
                     labels: hourLabels,
                     datasets: [{
-                        label: 'Orders In',
+                        label: 'Distinct Orders In',
                         data: hourCounts,
                         borderColor: 'rgba(139, 92, 246, 1)',
                         backgroundColor: 'rgba(139, 92, 246, 0.2)',
@@ -998,8 +1006,8 @@
 
             // --- 3. Daily Volume Chart ---
             const dailyCounts = {};
-            orders.forEach(o => {
-                const dateStr = new Date(o.inTime).toLocaleDateString();
+            Object.values(distinctOrdersByTime).forEach(inTime => {
+                const dateStr = new Date(inTime).toLocaleDateString();
                 dailyCounts[dateStr] = (dailyCounts[dateStr] || 0) + 1;
             });
 
@@ -1014,7 +1022,7 @@
                 data: {
                     labels: sortedDates,
                     datasets: [{
-                        label: 'Orders per Day',
+                        label: 'Distinct Orders per Day',
                         data: dailyData,
                         backgroundColor: 'rgba(245, 158, 11, 0.6)',
                         borderColor: 'rgba(245, 158, 11, 1)',
