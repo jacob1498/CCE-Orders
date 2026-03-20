@@ -657,6 +657,11 @@
 
                 const sku = skuInput.value.toUpperCase();
 
+                if (!skuMaster.some(s => s.code === sku)) {
+                    showToast(`SKU "${sku}" not found in Master List.`, "error");
+                    return;
+                }
+
                 if (existingOrderSkus.has(sku)) {
                     showToast(`SKU ${sku} already exists for Order #${customer}.`, "error");
                     return;
@@ -778,6 +783,12 @@
             }
 
             const sku = document.getElementById('editSku').value.toUpperCase();
+
+            if (!skuMaster.some(s => s.code === sku)) {
+                showToast(`SKU "${sku}" not found in Master List.`, "error");
+                return;
+            }
+
             const qty = parseInt(document.getElementById('editQty').value);
 
             const orderIndex = orders.findIndex(o => o.id === id);
