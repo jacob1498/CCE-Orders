@@ -379,6 +379,35 @@
         </div>
     </div>
 
+    <!-- EDIT ORDER MODAL -->
+    <div id="editOrderModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md flex flex-col animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold">Edit Order Details</h2>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <form id="editOrderForm" onsubmit="submitEditOrder(event)" class="p-6 space-y-4">
+                <input type="hidden" id="editOrderId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
+                    <input type="text" id="editCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">SKU</label>
+                    <input type="text" id="editSku" list="skuOptions" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantity</label>
+                    <input type="number" id="editQty" required min="1" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeEditModal()" class="w-1/2 bg-gray-200 text-gray-700 font-bold py-2 rounded hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="w-1/2 bg-primary-600 text-white font-bold py-2 rounded hover:bg-primary-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     </div> <!-- End of #app-container -->
 
     <!-- JAVASCRIPT LOGIC -->
@@ -647,6 +676,42 @@
             }
         }
 
+        // 4.5 EDIT ORDER DETAILS
+        function openEditModal(id) {
+            const order = orders.find(o => o.id === id);
+            if (!order) return;
+            
+            document.getElementById('editOrderId').value = order.id;
+            document.getElementById('editCustomer').value = order.customer;
+            document.getElementById('editSku').value = order.sku;
+            document.getElementById('editQty').value = order.qty;
+            
+            document.getElementById('editOrderModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editOrderModal').classList.add('hidden');
+            document.getElementById('editOrderForm').reset();
+        }
+
+        function submitEditOrder(e) {
+            e.preventDefault();
+            const id = Number(document.getElementById('editOrderId').value);
+            const customer = document.getElementById('editCustomer').value;
+            const sku = document.getElementById('editSku').value.toUpperCase();
+            const qty = parseInt(document.getElementById('editQty').value);
+
+            const orderIndex = orders.findIndex(o => o.id === id);
+            if (orderIndex > -1) {
+                orders[orderIndex].customer = customer;
+                orders[orderIndex].sku = sku;
+                orders[orderIndex].qty = qty;
+                saveData();
+                closeEditModal();
+                showToast("Order details updated.", "success");
+            }
+        }
+
         function dismissBanner() {
             isBannerDismissed = true;
             document.getElementById('overdueBanner').classList.add('-translate-y-full');
@@ -823,6 +888,7 @@
                                  <button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow" title="Cancel">✕</button>`
                                 : (isCancelled ? `<span class="text-red-400 text-xs italic">Cancelled</span>` : `<span class="text-gray-400 text-xs">Completed</span>`)
                             }
+                            <button onclick="openEditModal(${order.id})" class="text-gray-400 hover:text-blue-600 ml-1 font-bold" title="Edit Order Details">✎</button>
                             <button onclick="deleteOrder(${order.id})" class="text-gray-400 hover:text-red-600 ml-1 font-bold" title="Delete Permanently">🗑</button>
                         </div>
                     </td>
