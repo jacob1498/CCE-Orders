@@ -171,6 +171,7 @@
                             <span class="text-xs font-bold text-primary-800"><span id="bulkCount">0</span> Selected</span>
                             <button onclick="performBulkAction('complete')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded shadow-sm">Complete</button>
                             <button onclick="performBulkAction('cancel')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded shadow-sm">Cancel</button>
+                            <button onclick="performBulkAction('delete')" class="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded shadow-sm">Delete</button>
                         </div>
                         <div class="flex gap-1">
                             <button onclick="downloadOrderSample()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1.5 rounded border border-gray-300 flex items-center gap-1 whitespace-nowrap" title="Download Template">📄 Sample</button>
@@ -538,6 +539,14 @@
             }
         }
 
+        function deleteOrder(id) {
+            if (confirm("Are you sure you want to permanently delete this order?")) {
+                orders = orders.filter(o => o.id !== id);
+                selectedOrderIds.delete(id);
+                saveData();
+            }
+        }
+
         function dismissBanner() {
             isBannerDismissed = true;
             document.getElementById('overdueBanner').classList.add('-translate-y-full');
@@ -699,13 +708,14 @@
                     <td class="px-4 py-3 text-gray-500">${formatTime(order.inTime)}</td>
                     <td class="px-4 py-3">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
                     <td class="px-4 py-3 text-right">
-                        ${!isComplete && !isCancelled ? 
-                            `<div class="flex justify-end gap-2">
-                                <button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded shadow">Out</button>
-                                <button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow" title="Cancel">✕</button>
-                             </div>`
-                            : (isCancelled ? `<span class="text-red-400 text-xs italic">Cancelled</span>` : `<span class="text-gray-400 text-xs">Completed</span>`)
-                        }
+                        <div class="flex justify-end items-center gap-2">
+                            ${!isComplete && !isCancelled ? 
+                                `<button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-3 rounded shadow">Out</button>
+                                 <button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow" title="Cancel">✕</button>`
+                                : (isCancelled ? `<span class="text-red-400 text-xs italic">Cancelled</span>` : `<span class="text-gray-400 text-xs">Completed</span>`)
+                            }
+                            <button onclick="deleteOrder(${order.id})" class="text-gray-400 hover:text-red-600 ml-1 font-bold" title="Delete Permanently">🗑</button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -780,25 +790,37 @@
             let count = 0;
             const now = new Date().toISOString();
 
-            orders.forEach(order => {
-                if (selectedOrderIds.has(order.id)) {
-                    if (action === 'complete') {
-                        // Only complete if not already out/cancelled
-                        if (!order.outTime && order.status !== 'CANCELLED') {
+            if (action === 'delete') {
+                const initialCount = orders.length;
+                orders = orders.filter(o => !selectedOrderIds.has(o.id));
+                count = initialCount - orders.length;
+            } else {
+                orders.forEach(order => {
+                    if (selectedOrderIds.has(order.id)) {
+                        if (action === 'complete') {
+                            // Only complete if not already out/cancelled
+                            if (!order.outTime && order.status !== 'CANCELLED') {
+                                order.outTime = now;
+                                count++;
+                            }
+                        } else if (action === 'cancel') {
+                            order.status = 'CANCELLED';
                             order.outTime = now;
                             count++;
                         }
-                    } else if (action === 'cancel') {
-                        order.status = 'CANCELLED';
-                        order.outTime = now;
-                        count++;
                     }
-                }
-            });
+                });
+            }
 
             selectedOrderIds.clear();
             saveData();
-            alert(`${action === 'complete' ? 'Completed' : 'Cancelled'} ${count} orders.`);
+            
+            let actionText = 'Processed';
+            if(action === 'complete') actionText = 'Completed';
+            else if(action === 'cancel') actionText = 'Cancelled';
+            else if(action === 'delete') actionText = 'Deleted';
+            
+            alert(`${actionText} ${count} orders.`);
         }
 
         function renderPaginationControls(totalItems, totalPages) {
@@ -1024,6 +1046,7 @@
         // 7. UTILITIES
         function saveData() {
             localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
+            localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
             renderTable();
             renderCharts();
         }
