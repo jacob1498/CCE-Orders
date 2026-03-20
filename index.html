@@ -217,7 +217,14 @@
             <!-- DASHBOARD GRIDS -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="card p-6">
-                    <h2 class="text-lg font-bold mb-2 text-gray-700">🔥 Fast Moving SKUs</h2>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg font-bold text-gray-700">🔥 Fast Moving SKUs</h2>
+                        <select onchange="updateChartMetric('velocity', this.value)" class="text-xs border rounded p-1 bg-gray-50 text-gray-600 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="qty">Total Qty</option>
+                            <option value="orders">Order Count</option>
+                            <option value="lines">Frequency</option>
+                        </select>
+                    </div>
                     <div class="h-48">
                         <canvas id="velocityChart"></canvas>
                     </div>
@@ -229,7 +236,14 @@
                     </div>
                 </div>
                 <div class="card p-6">
-                    <h2 class="text-lg font-bold mb-2 text-gray-700">🏆 Top Brands</h2>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg font-bold text-gray-700">🏆 Top Brands</h2>
+                        <select onchange="updateChartMetric('brand', this.value)" class="text-xs border rounded p-1 bg-gray-50 text-gray-600 focus:ring-primary-500 focus:border-primary-500">
+                            <option value="qty">Total Qty</option>
+                            <option value="orders">Order Count</option>
+                            <option value="lines">Frequency</option>
+                        </select>
+                    </div>
                     <div class="h-48">
                         <canvas id="brandChart"></canvas>
                     </div>
@@ -320,6 +334,8 @@
         let currentSort = { column: 'inTime', direction: 'desc' };
         let isBannerDismissed = false;
         let lastOverdueCount = 0;
+        let velocityMetric = 'qty';
+        let brandMetric = 'qty';
         
         let currentPage = 1;
         let rowsPerPage = 20; // Changed to let
@@ -403,6 +419,15 @@
                 localStorage.setItem('theme', 'pink');
             }
             renderCharts(); // Update chart colors
+        }
+
+        function updateChartMetric(chartType, value) {
+            if (chartType === 'velocity') {
+                velocityMetric = value;
+            } else if (chartType === 'brand') {
+                brandMetric = value;
+            }
+            renderCharts();
         }
 
         // 3. ADD ORDER (MODAL LOGIC) - This replaces the old single-item form
@@ -820,19 +845,29 @@
         // 6. RENDER DASHBOARD (CHARTS)
         function renderCharts() {
             // --- 1. Velocity Chart (Fast Moving SKUs) ---
-            const skuCounts = {};
+            const skuData = {};
             orders.forEach(order => {
-                if (!skuCounts[order.sku]) skuCounts[order.sku] = 0;
-                skuCounts[order.sku] += order.qty;
+                if (!skuData[order.sku]) skuData[order.sku] = { qty: 0, lines: 0, customers: new Set() };
+                skuData[order.sku].qty += order.qty;
+                skuData[order.sku].lines += 1;
+                skuData[order.sku].customers.add(order.customer);
             });
 
-            const sortedSkus = Object.keys(skuCounts)
-                .map(sku => ({ sku, qty: skuCounts[sku] }))
-                .sort((a, b) => b.qty - a.qty)
+            const sortedSkus = Object.keys(skuData)
+                .map(sku => {
+                    let value = 0;
+                    if (velocityMetric === 'qty') value = skuData[sku].qty;
+                    else if (velocityMetric === 'orders') value = skuData[sku].customers.size;
+                    else value = skuData[sku].lines;
+                    return { sku, value };
+                })
+                .sort((a, b) => b.value - a.value)
                 .slice(0, 5); // Top 5
 
             const velLabels = sortedSkus.map(i => i.sku);
-            const velData = sortedSkus.map(i => i.qty);
+            const velData = sortedSkus.map(i => i.value);
+            
+            const velLabelText = velocityMetric === 'qty' ? 'Total Units' : (velocityMetric === 'orders' ? 'Unique Orders' : 'Frequency');
 
             let themeColor = { bg: 'rgba(59, 130, 246, 0.6)', border: 'rgba(59, 130, 246, 1)' }; // Default Blue
             if (document.body.classList.contains('theme-pink')) {
@@ -849,7 +884,7 @@
                 data: {
                     labels: velLabels,
                     datasets: [{
-                        label: 'Total Units Sold',
+                        label: velLabelText,
                         data: velData,
                         backgroundColor: themeColor.bg,
                         borderColor: themeColor.border,
@@ -929,26 +964,37 @@
             });
 
             // --- 4. Brand Chart (Doughnut) ---
-            const brandCounts = {};
+            const brandDataRaw = {};
             orders.forEach(order => {
                 const skuItem = skuMaster.find(s => s.code === order.sku);
                 const brand = (skuItem && skuItem.brand) ? skuItem.brand : 'Unbranded';
-                if (!brandCounts[brand]) brandCounts[brand] = 0;
-                brandCounts[brand] += order.qty;
+                
+                if (!brandDataRaw[brand]) brandDataRaw[brand] = { qty: 0, lines: 0, customers: new Set() };
+                brandDataRaw[brand].qty += order.qty;
+                brandDataRaw[brand].lines += 1;
+                brandDataRaw[brand].customers.add(order.customer);
             });
 
-            let sortedBrands = Object.keys(brandCounts)
-                .map(brand => ({ brand, qty: brandCounts[brand] }))
-                .sort((a, b) => b.qty - a.qty);
+            let sortedBrands = Object.keys(brandDataRaw)
+                .map(brand => {
+                    let value = 0;
+                    if (brandMetric === 'qty') value = brandDataRaw[brand].qty;
+                    else if (brandMetric === 'orders') value = brandDataRaw[brand].customers.size;
+                    else value = brandDataRaw[brand].lines;
+                    return { brand, value };
+                })
+                .sort((a, b) => b.value - a.value);
+                
+            const brandLabelText = brandMetric === 'qty' ? 'Units' : (brandMetric === 'orders' ? 'Orders' : 'Lines');
 
             if (sortedBrands.length > 10) {
-                const othersQty = sortedBrands.slice(10).reduce((acc, curr) => acc + curr.qty, 0);
+                const othersQty = sortedBrands.slice(10).reduce((acc, curr) => acc + curr.value, 0);
                 sortedBrands = sortedBrands.slice(0, 10);
-                sortedBrands.push({ brand: 'Others', qty: othersQty });
+                sortedBrands.push({ brand: 'Others', value: othersQty });
             }
 
             const brandLabels = sortedBrands.map(b => b.brand);
-            const brandData = sortedBrands.map(b => b.qty);
+            const brandData = sortedBrands.map(b => b.value);
             
             const ctxBrand = document.getElementById('brandChart').getContext('2d');
             if (brandChartInstance) brandChartInstance.destroy();
@@ -958,7 +1004,7 @@
                 data: {
                     labels: brandLabels,
                     datasets: [{
-                        label: 'Units',
+                        label: brandLabelText,
                         data: brandData,
                         backgroundColor: [
                             '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6',
