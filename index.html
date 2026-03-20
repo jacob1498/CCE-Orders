@@ -356,6 +356,7 @@
                 <div class="flex gap-2">
                     <input type="text" id="inventorySearchInput" onkeyup="renderInventoryTable()" placeholder="🔍 Search SKU, Description, or Brand..." class="w-64 border border-gray-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500">
                     <button onclick="downloadStockSample()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📄 Sample</button>
+                    <button onclick="exportInventory()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export</button>
                     <button onclick="document.getElementById('stockUploadInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📥 Upload Stock (CSV)</button>
                     <input type="file" id="stockUploadInput" accept=".csv" onchange="uploadStockLevels(this)" class="hidden">
                     <button onclick="document.getElementById('inventoryModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
@@ -644,6 +645,29 @@
             const timestamp = new Date().toISOString(); // Single timestamp for all items in the order
             const newOrders = [];
 
+            // Validation: Check for duplicates (Global & Local)
+            const existingOrderSkus = new Set(
+                orders.filter(o => o.customer === customer).map(o => o.sku)
+            );
+            const currentBatchSkus = new Set();
+
+            for (const row of rows) {
+                const skuInput = row.querySelector('input[name="sku"]');
+                if (!skuInput.value) continue;
+
+                const sku = skuInput.value.toUpperCase();
+
+                if (existingOrderSkus.has(sku)) {
+                    showToast(`SKU ${sku} already exists for Order #${customer}.`, "error");
+                    return;
+                }
+                if (currentBatchSkus.has(sku)) {
+                    showToast(`Duplicate SKU ${sku} in current list.`, "error");
+                    return;
+                }
+                currentBatchSkus.add(sku);
+            }
+
             rows.forEach((row, index) => {
                 const skuInput = row.querySelector('input[name="sku"]');
                 const qtyInput = row.querySelector('input[name="qty"]');
@@ -665,6 +689,7 @@
             
             saveData();
             closeModal();
+            showToast("Order created successfully.", "success");
         }
 
         // 4. COMPLETE ORDER (ORDER OUT)
@@ -1421,6 +1446,61 @@
                 input.value = '';
             };
             reader.readAsText(file);
+        }
+
+        function exportInventory() {
+            // 1. Calculate Sales Velocity (Last 30 Days)
+            const sales30d = {};
+            const now = new Date();
+            const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            orders.forEach(o => {
+                if (o.status !== 'CANCELLED' && new Date(o.inTime) >= cutoff) {
+                    sales30d[o.sku] = (sales30d[o.sku] || 0) + o.qty;
+                }
+            });
+
+            // 2. Prepare Data List
+            let inventoryList = skuMaster.map(s => {
+                const sku = s.code;
+                const stock = stockLevels[sku] || 0;
+                const sold30 = sales30d[sku] || 0;
+                return { ...s, stock, sold30 };
+            });
+
+            // 3. Calculate Metrics (Sort by Sales Desc for ABC)
+            inventoryList.sort((a, b) => b.sold30 - a.sold30);
+            const totalSales = inventoryList.reduce((acc, curr) => acc + curr.sold30, 0);
+            let runningSum = 0;
+
+            const exportData = inventoryList.map(item => {
+                const dailyAvg = item.sold30 / 30;
+                let cover = (item.stock <= 0) ? 0 : (dailyAvg === 0 ? '> 999' : Math.round(item.stock / dailyAvg));
+                let abc = 'D';
+                
+                if (item.sold30 > 0) {
+                    runningSum += item.sold30;
+                    const pct = runningSum / totalSales;
+                    abc = (pct <= 0.80) ? 'A' : ((pct <= 0.95) ? 'B' : 'C');
+                }
+
+                return {
+                    "SKU": item.code,
+                    "Description": item.desc,
+                    "Brand": item.brand || '',
+                    "Stock Level": item.stock,
+                    "30d Sales": item.sold30,
+                    "Daily Avg": dailyAvg.toFixed(2),
+                    "Days Cover": cover,
+                    "ABC Class": abc
+                };
+            });
+
+            // 4. Export
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            XLSX.utils.book_append_sheet(wb, ws, "Inventory Status");
+            XLSX.writeFile(wb, `Inventory_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
         function renderInventoryTable() {
