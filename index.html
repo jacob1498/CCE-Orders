@@ -467,6 +467,27 @@
             }
         }
 
+        function editOrderTime(id) {
+            const order = orders.find(o => o.id === id);
+            if (!order || !order.outTime) return;
+
+            const d = new Date(order.outTime);
+            const pad = (n) => n.toString().padStart(2, '0');
+            // Format for prompt: YYYY-MM-DD HH:MM
+            const defaultVal = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+            const newStr = prompt("Edit Completed Time (YYYY-MM-DD HH:MM):", defaultVal);
+            if (newStr) {
+                const newDate = new Date(newStr);
+                if (!isNaN(newDate.getTime())) {
+                    order.outTime = newDate.toISOString();
+                    saveData();
+                } else {
+                    alert("Invalid date format.");
+                }
+            }
+        }
+
         function cancelOrder(id) {
             if (confirm("Are you sure you want to cancel this order?")) {
                 const orderIndex = orders.findIndex(o => o.id === id);
@@ -632,7 +653,7 @@
                     <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px]" title="${titleText}">${descriptionText || '-'}</td>
                     <td class="px-4 py-3">${order.qty}</td>
                     <td class="px-4 py-3 text-gray-500">${formatTime(order.inTime)}</td>
-                    <td class="px-4 py-3">${isComplete ? formatTime(order.outTime) + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
+                    <td class="px-4 py-3">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
                     <td class="px-4 py-3 text-right">
                         ${!isComplete && !isCancelled ? 
                             `<div class="flex justify-end gap-2">
