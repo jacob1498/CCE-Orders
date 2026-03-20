@@ -138,32 +138,32 @@
     
         <!-- SUMMARY CARDS -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div class="card p-4 border-l-4 border-primary-500 bg-primary-50">
+        <div onclick="viewSummaryList('total')" class="card p-4 border-l-4 border-primary-500 bg-primary-50 cursor-pointer hover:shadow-lg transition-all">
             <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
             <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
         </div>
-        <div class="card p-4 border-l-4 border-yellow-500 bg-yellow-50">
+        <div onclick="viewSummaryList('pending')" class="card p-4 border-l-4 border-yellow-500 bg-yellow-50 cursor-pointer hover:shadow-lg transition-all">
             <p class="text-xs text-gray-500 font-bold uppercase">In Process</p>
             <div class="flex justify-between items-baseline">
                 <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
                 <p class="text-xs text-gray-500 font-bold" id="statPendingPct">0%</p>
             </div>
         </div>
-        <div class="card p-4 border-l-4 border-green-500 bg-green-50">
+        <div onclick="viewSummaryList('completed')" class="card p-4 border-l-4 border-green-500 bg-green-50 cursor-pointer hover:shadow-lg transition-all">
             <p class="text-xs text-gray-500 font-bold uppercase">Completed</p>
             <div class="flex justify-between items-baseline">
                 <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
                 <p class="text-xs text-gray-500 font-bold" id="statCompletedPct">0%</p>
             </div>
         </div>
-        <div id="cardOverdue" class="card p-4 border-l-4 border-red-500 bg-red-50 transition-colors">
+        <div onclick="viewSummaryList('overdue')" id="cardOverdue" class="card p-4 border-l-4 border-red-500 bg-red-50 transition-colors cursor-pointer hover:shadow-lg">
             <p class="text-xs text-gray-500 font-bold uppercase">Overdue (>30m)</p>
             <div class="flex justify-between items-baseline">
                 <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
                 <p class="text-xs text-gray-500 font-bold" id="statOverduePct">0%</p>
             </div>
         </div>
-        <div class="card p-4 border-l-4 border-gray-500 bg-gray-50">
+        <div onclick="viewSummaryList('cancelled')" class="card p-4 border-l-4 border-gray-500 bg-gray-50 cursor-pointer hover:shadow-lg transition-all">
             <p class="text-xs text-gray-500 font-bold uppercase">Cancelled</p>
             <div class="flex justify-between items-baseline">
                 <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
@@ -321,7 +321,7 @@
                 <div class="p-6 flex-grow overflow-y-auto">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
-                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="e.g. #12345">
+                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="e.g. 40012345">
                     </div>
                     <hr class="my-4">
                     <div class="flex justify-between items-center mb-2">
@@ -375,6 +375,34 @@
             <div class="p-4 border-t bg-gray-50 text-xs text-gray-500 flex justify-between">
                 <span>* ABC Classification based on 30-day sales volume (A=Top 80%, B=Next 15%, C=Bottom 5%)</span>
                 <span>* Days Cover = Stock / Daily Avg Usage</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY LIST MODAL -->
+    <div id="summaryListModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-gray-800" id="summaryModalTitle">Order List</h2>
+                <button onclick="closeSummaryModal()" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-0 overflow-auto flex-grow">
+                <table class="min-w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-100 border-b sticky top-0 z-10">
+                        <tr>
+                            <th class="px-6 py-3 font-bold text-gray-700">Order #</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">SKU</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">Description</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">Qty</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">Time In</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryListBody" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t bg-gray-50 text-right">
+                <button onclick="closeSummaryModal()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Close</button>
             </div>
         </div>
     </div>
@@ -437,6 +465,7 @@
         
         let currentPage = 1;
         let rowsPerPage = 20; // Changed to let
+        let currentSummaryFilter = 'total';
 
         // 2. INITIALIZATION
         document.addEventListener('DOMContentLoaded', () => {
@@ -600,6 +629,12 @@
             e.preventDefault();
             
             const customer = document.getElementById('modalCustomer').value;
+
+            if (!/^4\d{7}$/.test(customer)) {
+                showToast("Order Number must be 8 digits and start with '4'.", "error");
+                return;
+            }
+
             const rows = document.querySelectorAll('.sku-row');
             const timestamp = new Date().toISOString(); // Single timestamp for all items in the order
             const newOrders = [];
@@ -633,6 +668,10 @@
             if (orderIndex > -1) {
                 orders[orderIndex].outTime = new Date().toISOString();
                 saveData();
+                // If called from summary modal, refresh it
+                if (!document.getElementById('summaryListModal').classList.contains('hidden')) {
+                    viewSummaryList(currentSummaryFilter);
+                }
             }
         }
 
@@ -664,6 +703,10 @@
                     orders[orderIndex].status = 'CANCELLED';
                     orders[orderIndex].outTime = new Date().toISOString();
                     saveData();
+                    // If called from summary modal, refresh it
+                    if (!document.getElementById('summaryListModal').classList.contains('hidden')) {
+                        viewSummaryList(currentSummaryFilter);
+                    }
                 }
             }
         }
@@ -698,6 +741,12 @@
             e.preventDefault();
             const id = Number(document.getElementById('editOrderId').value);
             const customer = document.getElementById('editCustomer').value;
+
+            if (!/^4\d{7}$/.test(customer)) {
+                showToast("Order Number must be 8 digits and start with '4'.", "error");
+                return;
+            }
+
             const sku = document.getElementById('editSku').value.toUpperCase();
             const qty = parseInt(document.getElementById('editQty').value);
 
@@ -1361,6 +1410,7 @@
 
                 saveData();
                 renderInventoryTable();
+                renderSkuMaster();
                 showToast(`Successfully updated stock for ${count} SKUs.`, 'success');
                 input.value = '';
             };
@@ -1445,6 +1495,55 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // 6.6 SUMMARY LIST MODAL LOGIC
+        function viewSummaryList(filterType) {
+            currentSummaryFilter = filterType;
+            const modal = document.getElementById('summaryListModal');
+            const title = document.getElementById('summaryModalTitle');
+            const tbody = document.getElementById('summaryListBody');
+            
+            modal.classList.remove('hidden');
+            
+            let filtered = [];
+            let titleText = '';
+            const now = new Date();
+
+            switch(filterType) {
+                case 'total': filtered = orders; titleText = 'Total Orders'; break;
+                case 'pending': filtered = orders.filter(o => !o.outTime && o.status !== 'CANCELLED'); titleText = 'In Process Orders'; break;
+                case 'completed': filtered = orders.filter(o => o.outTime && o.status !== 'CANCELLED'); titleText = 'Completed Orders'; break;
+                case 'cancelled': filtered = orders.filter(o => o.status === 'CANCELLED'); titleText = 'Cancelled Orders'; break;
+                case 'overdue': 
+                    filtered = orders.filter(o => {
+                        if (o.status === 'CANCELLED') return false;
+                        const start = new Date(o.inTime);
+                        const end = o.outTime ? new Date(o.outTime) : now;
+                        return (end - start) / 60000 > 30;
+                    });
+                    titleText = 'Overdue Orders (>30m)';
+                    break;
+            }
+            
+            title.innerText = `${titleText} (${filtered.length})`;
+            tbody.innerHTML = '';
+            filtered.sort((a,b) => new Date(b.inTime) - new Date(a.inTime));
+
+            filtered.forEach(order => {
+                const skuItem = skuMaster.find(s => s.code === order.sku);
+                const desc = skuItem ? skuItem.desc : '-';
+                const isComplete = order.outTime !== null;
+                const isCancelled = order.status === 'CANCELLED';
+                const tr = document.createElement('tr');
+                tr.className = isCancelled ? 'bg-red-50 text-gray-500' : (isComplete ? 'bg-gray-50 text-gray-600' : 'bg-white hover:bg-gray-50');
+                tr.innerHTML = `<td class="px-6 py-3 font-medium border-b">${order.customer}</td><td class="px-6 py-3 font-bold border-b">${order.sku}</td><td class="px-6 py-3 text-xs truncate max-w-[200px] border-b" title="${desc}">${desc}</td><td class="px-6 py-3 border-b">${order.qty}</td><td class="px-6 py-3 text-xs border-b">${new Date(order.inTime).toLocaleString()}</td><td class="px-6 py-3 text-right border-b">${!isComplete && !isCancelled ? `<button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded shadow">Out</button><button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow ml-1">✕</button>` : (isCancelled ? '<span class="text-xs italic text-red-400">Cancelled</span>' : '<span class="text-xs text-gray-400">Completed</span>')}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summaryListModal').classList.add('hidden');
         }
 
         // 7. UTILITIES
@@ -1936,7 +2035,6 @@
                                 } else {
                                     skuMaster.push({ code: sku, desc: desc, brand: '' });
                                 }
-                                localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
                             }
 
                             orders.unshift({
