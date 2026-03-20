@@ -99,11 +99,12 @@
         <div class="mb-8 flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
-                <p class="text-gray-500 text-sm">BeautyCon 2026 | Manual Entry System</p>
+                <p class="text-gray-500 text-sm">Manual Entry System</p>
             </div>
             <div class="flex gap-4 items-center">
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
                 <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
+                <button onclick="generateDemoData()" class="text-purple-600 text-sm hover:underline">🎲 Test Data</button>
                 <button onclick="toggleTheme()" class="text-gray-500 text-sm hover:underline" id="themeBtn">🎨 Theme</button>
                 <button onclick="handleLogout()" class="text-primary-500 text-sm hover:underline">Logout</button>
             </div>
@@ -117,19 +118,31 @@
         </div>
         <div class="card p-4 border-l-4 border-yellow-500">
             <p class="text-xs text-gray-500 font-bold uppercase">In Process</p>
-            <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
+            <div class="flex justify-between items-baseline">
+                <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
+                <p class="text-xs text-gray-500 font-bold" id="statPendingPct">0%</p>
+            </div>
         </div>
         <div class="card p-4 border-l-4 border-green-500">
             <p class="text-xs text-gray-500 font-bold uppercase">Completed</p>
-            <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
+            <div class="flex justify-between items-baseline">
+                <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
+                <p class="text-xs text-gray-500 font-bold" id="statCompletedPct">0%</p>
+            </div>
         </div>
         <div class="card p-4 border-l-4 border-red-500">
             <p class="text-xs text-gray-500 font-bold uppercase">Overdue (>30m)</p>
-            <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
+            <div class="flex justify-between items-baseline">
+                <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
+                <p class="text-xs text-gray-500 font-bold" id="statOverduePct">0%</p>
+            </div>
         </div>
         <div class="card p-4 border-l-4 border-gray-500">
             <p class="text-xs text-gray-500 font-bold uppercase">Cancelled</p>
-            <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
+            <div class="flex justify-between items-baseline">
+                <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
+                <p class="text-xs text-gray-500 font-bold" id="statCancelledPct">0%</p>
+            </div>
         </div>
     </div>
 
@@ -930,10 +943,63 @@
         function clearData() {
             if(confirm("Are you sure you want to clear all data? This cannot be undone.")) {
                 localStorage.removeItem('simpleTrackerOrders');
+                localStorage.removeItem('simpleTrackerSkuMaster');
                 orders = [];
-                renderTable();
-                renderCharts();
+                skuMaster = [];
+                initializeApp(); // Use initializeApp to fully reset the view
             }
+        }
+
+        function generateDemoData() {
+            if (!confirm("This will clear all current data and load a demo set. Continue?")) return;
+
+            // 1. Define Demo SKU Master
+            const demoSkuMaster = [
+                { code: 'LIP-001', desc: 'Velvet Matte Lipstick', brand: 'Luxe' },
+                { code: 'LIP-002', desc: 'Hydra-Gloss Lip Shine', brand: 'Luxe' },
+                { code: 'FND-101', desc: 'Pro-Filter Foundation', brand: 'Aura' },
+                { code: 'FND-105', desc: 'Sheer Glow Foundation', brand: 'Aura' },
+                { code: 'EYE-201', desc: 'Galaxy Eyeshadow Palette', brand: 'Stellar' },
+                { code: 'EYE-202', desc: 'Liquid Precision Eyeliner', brand: 'Stellar' },
+                { code: 'SKN-301', desc: 'Vitamin C Serum', brand: 'GlowUp' },
+                { code: 'SKN-302', desc: 'Hyaluronic Acid Moisturizer', brand: 'GlowUp' },
+                { code: 'BLH-401', desc: 'Rose Petal Blush', brand: 'Luxe' },
+            ];
+
+            // 2. Define Demo Orders
+            const demoOrders = [];
+            const now = new Date();
+            const addOrder = (customer, sku, qty, minutesAgo, isComplete) => {
+                const inTime = new Date(now.getTime() - minutesAgo * 60000).toISOString();
+                let outTime = null;
+                if (isComplete) {
+                    outTime = new Date(new Date(inTime).getTime() + (Math.random() * 20 + 5) * 60000).toISOString(); // 5-25 mins later
+                }
+                demoOrders.push({ id: Date.now() + Math.random(), customer, sku, qty, inTime, outTime, status: null });
+            };
+
+            addOrder('ORD-1001', 'LIP-001', 2, 120, true);
+            addOrder('ORD-1001', 'FND-101', 1, 120, true);
+            addOrder('ORD-1002', 'EYE-202', 1, 95, true);
+            addOrder('ORD-1003', 'SKN-301', 1, 65, true);
+            addOrder('ORD-1003', 'SKN-302', 1, 65, true);
+            addOrder('ORD-1004', 'LIP-002', 3, 40, false); // Overdue
+            addOrder('ORD-1005', 'FND-105', 1, 25, false); // Pending
+            addOrder('ORD-1006', 'EYE-201', 1, 15, false); // Pending
+            addOrder('ORD-1007', 'BLH-401', 2, 5, false); // Pending
+
+            const cancelledOrderTime = new Date(now.getTime() - 180 * 60000).toISOString();
+            demoOrders.push({ id: Date.now() + Math.random(), customer: 'ORD-999', sku: 'LIP-001', qty: 1, inTime: cancelledOrderTime, outTime: new Date(new Date(cancelledOrderTime).getTime() + 5 * 60000).toISOString(), status: 'CANCELLED' });
+
+            // 3. Update State and Local Storage
+            skuMaster = demoSkuMaster;
+            orders = demoOrders.sort((a, b) => new Date(b.inTime) - new Date(a.inTime));
+            localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+            localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
+
+            // 4. Re-render everything
+            initializeApp();
+            alert('Demo data has been loaded.');
         }
 
         function renderStats() {
