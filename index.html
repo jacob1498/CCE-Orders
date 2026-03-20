@@ -300,6 +300,10 @@
                         <input type="text" id="newSkuCode" required class="w-full border rounded p-2 text-sm mb-2" placeholder="SKU Code (e.g. A-001)">
                         <input type="text" id="newSkuDesc" required class="w-full border rounded p-2 text-sm mb-2" placeholder="Description (e.g. Blue Widget)">
                         <input type="text" id="newSkuBrand" class="w-full border rounded p-2 text-sm mb-2" placeholder="Brand Name (Optional)">
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="newSkuImg" class="flex-grow border rounded p-2 text-sm" placeholder="Image URL (Right click image on Watsons -> Copy Link)">
+                            <button type="button" onclick="searchWatsons()" class="bg-blue-100 text-blue-700 px-3 py-2 rounded text-sm font-bold border border-blue-200" title="Search Watsons PH">🔍</button>
+                        </div>
                         <button type="submit" class="w-full bg-gray-600 text-white text-sm font-bold py-2 rounded hover:bg-gray-700">Add to Master</button>
                     </form>
                     <div class="max-h-48 overflow-y-auto border-t pt-2">
@@ -884,6 +888,7 @@
                 const brandText = skuItem && skuItem.brand ? `\nBrand: ${skuItem.brand}` : '';
                 const titleText = `${descriptionText}${brandText}`;
                 const displayBrand = skuItem ? (skuItem.brand || '-') : '-';
+                const imgHtml = (skuItem && skuItem.img) ? `<img src="${skuItem.img}" class="w-8 h-8 object-cover rounded border border-gray-200 mr-2 bg-white flex-shrink-0" onerror="this.style.display='none'">` : '';
 
                 // Calculate Duration
                 let durationDisplay = '-';
@@ -926,7 +931,7 @@
                     <td class="px-4 py-3 font-medium text-gray-900 border-l border-gray-200">${order.customer}</td>
                     <td class="px-4 py-3 border-l border-gray-200"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
                     <td class="px-4 py-3 text-gray-600 text-xs border-l border-gray-200">${displayBrand}</td>
-                    <td class="px-4 py-3 text-gray-500 text-xs truncate max-w-[150px] border-l border-gray-200" title="${titleText}">${descriptionText || '-'}</td>
+                    <td class="px-4 py-3 text-gray-500 text-xs border-l border-gray-200"><div class="flex items-center" title="${titleText}">${imgHtml}<span class="truncate max-w-[150px]">${descriptionText || '-'}</span></div></td>
                     <td class="px-4 py-3 border-l border-gray-200">${order.qty}</td>
                     <td class="px-4 py-3 text-gray-500 border-l border-gray-200">${formatTime(order.inTime)}</td>
                     <td class="px-4 py-3 border-l border-gray-200">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
@@ -1756,6 +1761,7 @@
             const code = document.getElementById('newSkuCode').value.toUpperCase();
             const desc = document.getElementById('newSkuDesc').value;
             const brand = document.getElementById('newSkuBrand').value;
+            const img = document.getElementById('newSkuImg').value;
 
             if (!code || !desc) return; // Don't add empty entries
 
@@ -1765,9 +1771,10 @@
                 // Update existing SKU's description
                 skuMaster[existingSkuIndex].desc = desc;
                 skuMaster[existingSkuIndex].brand = brand;
+                if(img) skuMaster[existingSkuIndex].img = img;
             } else {
                 // Add as a new SKU
-                skuMaster.push({ code, desc, brand });
+                skuMaster.push({ code, desc, brand, img });
             }
 
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
@@ -1775,6 +1782,7 @@
             document.getElementById('newSkuCode').value = '';
             document.getElementById('newSkuDesc').value = '';
             document.getElementById('newSkuBrand').value = '';
+            document.getElementById('newSkuImg').value = '';
             renderSkuMaster();
             renderCharts(); // Update charts immediately
         }
@@ -1795,9 +1803,17 @@
             dataList.innerHTML = '';
 
             skuMaster.forEach(s => {
+                const imgDisplay = s.img ? `<img src="${s.img}" class="w-8 h-8 object-cover rounded border border-gray-200 mr-2 bg-white">` : '';
                 // List Item
                 list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span><b>${s.code}</b>: ${s.desc} <span class="text-gray-500 text-xs">${s.brand || ''}</span></span>
+                    <div class="flex items-center overflow-hidden w-full mr-2">
+                        ${imgDisplay}
+                        <div class="flex flex-col truncate flex-grow">
+                            <span class="text-xs font-bold">${s.code}</span>
+                            <span class="text-xs truncate text-gray-600" title="${s.desc}">${s.desc}</span>
+                            <span class="text-[10px] text-gray-400">${s.brand || ''}</span>
+                        </div>
+                    </div>
                     <button onclick="deleteSkuFromMaster('${s.code}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕</button>
                 </li>`;
                 // Datalist Option
@@ -1813,6 +1829,12 @@
             const brandEl = input.parentElement.querySelector('.sku-brand');
             if (descEl) descEl.textContent = match ? match.desc : '';
             if (brandEl) brandEl.textContent = match ? (match.brand || '') : '';
+        }
+
+        function searchWatsons() {
+            const query = document.getElementById('newSkuCode').value || document.getElementById('newSkuDesc').value;
+            if(query) window.open(`https://www.watsons.com.ph/search?text=${encodeURIComponent(query)}`, '_blank');
+            else showToast("Enter a SKU or Description to search.", "info");
         }
 
         function uploadSkuList(input) {
