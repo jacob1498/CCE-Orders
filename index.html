@@ -354,6 +354,7 @@
                     <p class="text-sm text-gray-500">Monitor Stock on Hand, Days Cover, and Classifications</p>
                 </div>
                 <div class="flex gap-2">
+                    <input type="text" id="inventorySearchInput" onkeyup="renderInventoryTable()" placeholder="🔍 Search SKU, Description, or Brand..." class="w-64 border border-gray-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500">
                     <button onclick="downloadStockSample()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📄 Sample</button>
                     <button onclick="document.getElementById('stockUploadInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📥 Upload Stock (CSV)</button>
                     <input type="file" id="stockUploadInput" accept=".csv" onchange="uploadStockLevels(this)" class="hidden">
@@ -1426,7 +1427,11 @@
             const tbody = document.getElementById('inventoryTableBody');
             tbody.innerHTML = '';
 
-            // 1. Calculate Sales Velocity (Last 30 Days)
+            // 1. Get search filter text
+            const searchInput = document.getElementById('inventorySearchInput');
+            const filterText = searchInput ? searchInput.value.toLowerCase() : '';
+
+            // 2. Calculate Sales Velocity (Last 30 Days)
             const sales30d = {};
             const now = new Date();
             const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -1437,24 +1442,22 @@
                 }
             });
 
-            // 2. Prepare Data List (Combine SkuMaster + Stock + Sales)
+            // 3. Prepare Data List (Combine SkuMaster + Stock + Sales)
             let inventoryList = skuMaster.map(s => {
                 const sku = s.code;
                 const stock = stockLevels[sku] || 0;
                 const sold30 = sales30d[sku] || 0;
                 return { ...s, stock, sold30 };
             });
-            
-            // Include SKUs that might be in stock/sales but not in master (edge case cleanup)
-            // (Skipping for brevity as logic handles master update on upload)
 
-            // 3. Calculate ABC Classification
-            // Sort by Sales Volume Descending
+            // 4. Calculate ABC Classification & other metrics
+            // Sort by Sales Volume Descending to calculate ABC ranks
             inventoryList.sort((a, b) => b.sold30 - a.sold30);
             
             const totalSales = inventoryList.reduce((acc, curr) => acc + curr.sold30, 0);
             let runningSum = 0;
 
+            // Add calculated metrics to each item
             inventoryList.forEach(item => {
                 const dailyAvg = item.sold30 / 30;
                 item.dailyAvg = dailyAvg;
@@ -1474,7 +1477,17 @@
                 } else {
                     item.abc = 'D'; // Dead stock / No sales
                 }
+            });
 
+            // 5. Filter for display
+            const displayList = inventoryList.filter(item => {
+                if (!filterText) return true;
+                const matchString = (item.code + ' ' + item.desc + ' ' + (item.brand || '')).toLowerCase();
+                return matchString.includes(filterText);
+            });
+
+            // 6. Render rows from the filtered list
+            displayList.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50";
                 
