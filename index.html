@@ -197,7 +197,20 @@
                         <span id="pendingCount" class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded whitespace-nowrap">0 Pending</span>
                     </div>
                 </div>
-                <div class="overflow-auto max-h-[70vh]">
+                <!-- TABS -->
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex gap-6 px-4" id="main-tabs">
+                        <button onclick="switchTab('details')" id="tab-btn-details" class="tab-btn border-primary-500 text-primary-600 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                            Order Details
+                        </button>
+                        <button onclick="switchTab('summary')" id="tab-btn-summary" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                            Order Summary
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- TAB PANELS -->
+                <div id="details-panel" class="overflow-auto max-h-[70vh]">
                     <table class="min-w-full text-left text-sm whitespace-nowrap">
                         <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-100 sticky top-0 z-10 shadow-sm">
                             <tr>
@@ -212,9 +225,23 @@
                                 <th class="px-4 py-3 text-right border-l border-gray-200">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="orderTableBody" class="divide-y divide-gray-200">
-                            <!-- Rows inserted via JS -->
-                        </tbody>
+                        <tbody id="orderTableBody" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div id="summary-panel" class="hidden overflow-auto max-h-[70vh]">
+                    <table class="min-w-full text-left text-sm whitespace-nowrap">
+                        <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-100 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="px-4 py-3">Date</th>
+                                <th class="px-4 py-3">Time</th>
+                                <th class="px-4 py-3">Order #</th>
+                                <th class="px-4 py-3 text-center">SKU Count</th>
+                                <th class="px-4 py-3 text-center">Total Qty</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Closed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTableBody" class="divide-y divide-gray-200"></tbody>
                     </table>
                 </div>
                 <!-- PAGINATION CONTROLS -->
@@ -325,7 +352,7 @@
                 <div class="p-6 flex-grow overflow-y-auto">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
-                        <input type="text" id="modalCustomer" required class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="e.g. 40012345">
+                        <input type="text" id="modalCustomer" required onkeydown="handleOrderNumberEnter(event)" class="mt-1 block w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="e.g. 40012345">
                     </div>
                     <hr class="my-4">
                     <div class="flex justify-between items-center mb-2">
@@ -334,6 +361,9 @@
                     </div>
                     <div id="skuRowsContainer" class="space-y-4">
                         <!-- SKU rows will be injected here by JS -->
+                    </div>
+                    <div class="mt-4 text-right text-gray-700 font-bold border-t pt-2">
+                        Total Quantity: <span id="modalTotalQty" class="text-primary-600 text-xl">0</span>
                     </div>
                 </div>
                 <div class="p-4 bg-gray-50 border-t">
@@ -469,6 +499,7 @@
         let velocityMetric = 'qty';
         let brandMetric = 'qty';
         
+        let activeTab = 'details';
         let currentPage = 1;
         let rowsPerPage = 20; // Changed to let
         let currentSummaryFilter = 'total';
@@ -529,7 +560,7 @@
         }
 
         function initializeApp() {
-            renderTable();
+            renderActiveTab();
             renderCharts();
             renderSkuMaster();
             applyInitialSkuMasterState();
@@ -588,6 +619,39 @@
             localStorage.setItem('fullWidthView', isBecomingFullWidth);
         }
 
+        function switchTab(tabName) {
+            activeTab = tabName;
+            currentPage = 1; // Reset to first page on tab switch
+
+            // Update button styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-primary-500', 'text-primary-600');
+                btn.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+            activeBtn.classList.add('border-primary-500', 'text-primary-600');
+            activeBtn.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+
+            // Show/hide panels and related controls
+            const detailsPanel = document.getElementById('details-panel');
+            const summaryPanel = document.getElementById('summary-panel');
+            const bulkActions = document.getElementById('bulkActions');
+            const selectAllHeader = document.getElementById('selectAll').parentElement;
+
+            if (tabName === 'details') {
+                detailsPanel.classList.remove('hidden');
+                summaryPanel.classList.add('hidden');
+                bulkActions.style.display = selectedOrderIds.size > 0 ? 'flex' : 'none'; // Use style to avoid class conflicts
+                selectAllHeader.style.display = '';
+            } else {
+                detailsPanel.classList.add('hidden');
+                summaryPanel.classList.remove('hidden');
+                bulkActions.style.display = 'none';
+                selectAllHeader.style.display = 'none';
+            }
+            renderActiveTab();
+        }
+
         function applyInitialLayoutState() {
             const isFullWidth = localStorage.getItem('fullWidthView') === 'true';
             if (isFullWidth) {
@@ -607,6 +671,7 @@
             document.getElementById('orderModal').classList.add('hidden');
             document.getElementById('modalOrderForm').reset();
             document.getElementById('skuRowsContainer').innerHTML = ''; // Clear rows
+            document.getElementById('modalTotalQty').innerText = '0';
         }
 
         function addSkuRow() {
@@ -615,12 +680,12 @@
             div.className = 'flex gap-3 items-start sku-row animate-fade-in';
             div.innerHTML = `
                 <div class="flex-grow">
-                    <input type="text" name="sku" list="skuOptions" oninput="updateSkuDescDisplay(this)" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="SKU">
+                    <input type="text" name="sku" list="skuOptions" oninput="updateSkuDescDisplay(this)" onkeydown="handleSkuEnter(event, this)" onblur="checkAllSkuDuplicates()" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="SKU">
                     <p class="text-xs text-primary-600 font-semibold mt-1 min-h-[1rem] sku-desc"></p>
                     <p class="text-xs text-gray-500 mt-1 min-h-[1rem] sku-brand"></p>
                 </div>
                 <div class="w-24">
-                    <input type="number" name="qty" required min="1" class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Qty">
+                    <input type="number" name="qty" required min="1" onkeydown="handleQtyEnter(event, this)" oninput="calculateTotalQty()" class="w-full border border-gray-300 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500" placeholder="Qty">
                 </div>
                 <button type="button" onclick="removeSkuRow(this)" class="mt-2 text-red-400 hover:text-red-600 font-bold text-xl" title="Remove Item">&times;</button>
             `; // The 'oninput' calls the updated function
@@ -629,12 +694,14 @@
 
         function removeSkuRow(btn) {
             btn.closest('.sku-row').remove();
+            checkAllSkuDuplicates(); // Re-validate after removing a row
+            calculateTotalQty();
         }
 
         function submitMultiOrder(e) {
             e.preventDefault();
             
-            const customer = document.getElementById('modalCustomer').value;
+            const customer = document.getElementById('modalCustomer').value.trim();
 
             if (!/^4\d{7}$/.test(customer)) {
                 showToast("Order Number must be 8 digits and start with '4'.", "error");
@@ -655,7 +722,7 @@
                 const skuInput = row.querySelector('input[name="sku"]');
                 if (!skuInput.value) continue;
 
-                const sku = skuInput.value.toUpperCase();
+                const sku = skuInput.value.trim().toUpperCase();
 
                 if (!skuMaster.some(s => s.code === sku)) {
                     showToast(`SKU "${sku}" not found in Master List.`, "error");
@@ -681,7 +748,7 @@
                     newOrders.push({
                         id: Date.now() + index, // Ensure unique ID per row
                         customer: customer,
-                        sku: skuInput.value.toUpperCase(),
+                        sku: skuInput.value.trim().toUpperCase(),
                         qty: parseInt(qtyInput.value),
                         inTime: timestamp,
                         outTime: null
@@ -690,11 +757,83 @@
             });
 
             // Add all items to the main orders list
-            newOrders.forEach(o => orders.unshift(o));
+            orders.unshift(...newOrders);
             
             saveData();
             closeModal();
             showToast("Order created successfully.", "success");
+        }
+
+        function handleOrderNumberEnter(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission
+                const val = e.target.value;
+                if (/^4\d{7}$/.test(val)) {
+                    const firstSkuInput = document.querySelector('#skuRowsContainer input[name="sku"]');
+                    if (firstSkuInput) firstSkuInput.focus();
+                } else {
+                    showToast("Invalid Order Number format.", "error");
+                }
+            }
+        }
+
+        function handleSkuEnter(e, input) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const row = input.closest('.sku-row');
+                const qtyInput = row.querySelector('input[name="qty"]');
+                if (qtyInput) {
+                    qtyInput.focus();
+                }
+            }
+        }
+
+        function handleQtyEnter(e, input) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSkuRow();
+                // Focus the newly added SKU input
+                const container = document.getElementById('skuRowsContainer');
+                const lastRow = container.lastElementChild;
+                const skuInput = lastRow.querySelector('input[name="sku"]');
+                if (skuInput) skuInput.focus();
+            }
+        }
+
+        function checkAllSkuDuplicates() {
+            const allSkuInputs = Array.from(document.querySelectorAll('#skuRowsContainer input[name="sku"]'));
+            const skuCounts = {};
+
+            // Reset all borders first
+            allSkuInputs.forEach(input => {
+                input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            });
+
+            // Count occurrences of non-empty values
+            allSkuInputs.forEach(input => {
+                const sku = input.value.trim().toUpperCase();
+                if (sku) {
+                    skuCounts[sku] = (skuCounts[sku] || 0) + 1;
+                }
+            });
+
+            // Highlight inputs that are part of a duplicate pair/group
+            allSkuInputs.forEach(input => {
+                const sku = input.value.trim().toUpperCase();
+                if (sku && skuCounts[sku] > 1) {
+                    input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+                }
+            });
+        }
+
+        function calculateTotalQty() {
+            const qtyInputs = document.querySelectorAll('#skuRowsContainer input[name="qty"]');
+            let total = 0;
+            qtyInputs.forEach(input => {
+                const val = parseInt(input.value);
+                if (!isNaN(val)) total += val;
+            });
+            document.getElementById('modalTotalQty').innerText = total;
         }
 
         // 4. COMPLETE ORDER (ORDER OUT)
@@ -775,14 +914,14 @@
         function submitEditOrder(e) {
             e.preventDefault();
             const id = Number(document.getElementById('editOrderId').value);
-            const customer = document.getElementById('editCustomer').value;
+            const customer = document.getElementById('editCustomer').value.trim();
 
             if (!/^4\d{7}$/.test(customer)) {
                 showToast("Order Number must be 8 digits and start with '4'.", "error");
                 return;
             }
 
-            const sku = document.getElementById('editSku').value.toUpperCase();
+            const sku = document.getElementById('editSku').value.trim().toUpperCase();
 
             if (!skuMaster.some(s => s.code === sku)) {
                 showToast(`SKU "${sku}" not found in Master List.`, "error");
@@ -805,6 +944,103 @@
         function dismissBanner() {
             isBannerDismissed = true;
             document.getElementById('overdueBanner').classList.add('-translate-y-full');
+        }
+
+        function renderActiveTab() {
+            if (activeTab === 'details') {
+                renderTable();
+            } else {
+                renderSummaryTable();
+            }
+        }
+
+        function getSummaryData() {
+            const orderGroups = {};
+            orders.forEach(o => {
+                if (!orderGroups[o.customer]) orderGroups[o.customer] = [];
+                orderGroups[o.customer].push(o);
+            });
+
+            const now = new Date();
+            const summaryList = Object.keys(orderGroups).map(cust => {
+                const items = orderGroups[cust];
+                const firstItem = items[0];
+
+                // Status logic
+                const hasActive = items.some(o => !o.outTime && o.status !== 'CANCELLED');
+                const isFullyCancelled = items.every(o => o.status === 'CANCELLED');
+                const isOverdue = items.some(o => {
+                    if (o.status === 'CANCELLED') return false;
+                    const start = new Date(o.inTime);
+                    const end = o.outTime ? new Date(o.outTime) : now;
+                    return (end - start) / 60000 > 30;
+                });
+
+                let status = 'Completed';
+                if (isFullyCancelled) status = 'Cancelled';
+                else if (hasActive) status = 'Pending';
+                
+                if (isOverdue && status !== 'Completed' && status !== 'Cancelled') status = 'Overdue';
+
+                // Calculate Closed Time (Latest outTime of items)
+                const outTimes = items.map(o => o.outTime ? new Date(o.outTime).getTime() : 0).filter(t => t > 0);
+                const maxOutTime = outTimes.length > 0 ? new Date(Math.max(...outTimes)).toISOString() : null;
+
+                return {
+                    customer: cust,
+                    inTime: firstItem.inTime,
+                    outTime: maxOutTime,
+                    skuCount: items.length,
+                    totalQty: items.reduce((sum, item) => sum + item.qty, 0),
+                    status: status
+                };
+            });
+
+            // Default sort by time descending
+            summaryList.sort((a, b) => new Date(b.inTime) - new Date(a.inTime));
+            return summaryList;
+        }
+
+        function renderSummaryTable() {
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = '';
+
+            const allSummaryData = getSummaryData();
+
+            // Filter by Order #
+            const searchInput = document.getElementById('searchInput');
+            const filterText = searchInput ? searchInput.value.toLowerCase() : '';
+            const filteredData = allSummaryData.filter(item => {
+                return !filterText || item.customer.toLowerCase().includes(filterText);
+            });
+
+            // Paginate
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+
+            paginatedData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-white hover:bg-gray-50';
+
+                let statusClass = { 'Pending': 'bg-yellow-100 text-yellow-800', 'Completed': 'bg-green-100 text-green-800', 'Cancelled': 'bg-red-100 text-red-800', 'Overdue': 'bg-red-200 text-red-900 animate-pulse'}[item.status] || 'bg-gray-100';
+                const d = new Date(item.inTime);
+                const outTimeStr = item.outTime ? new Date(item.outTime).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : '-';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3">${d.toLocaleDateString()}</td>
+                    <td class="px-4 py-3">${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td class="px-4 py-3 font-medium">${item.customer}</td>
+                    <td class="px-4 py-3 text-center">${item.skuCount}</td>
+                    <td class="px-4 py-3 text-center">${item.totalQty}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${statusClass}">${item.status}</span></td>
+                    <td class="px-4 py-3 text-gray-500">${outTimeStr}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderPaginationControls(filteredData.length, totalPages);
         }
 
         // 5. RENDER TABLE
@@ -868,13 +1104,13 @@
 
             // Update Bulk Action Visibility
             const bulkActions = document.getElementById('bulkActions');
-            if (selectedOrderIds.size > 0) {
-                bulkActions.classList.remove('hidden');
-                bulkActions.classList.add('flex');
-                document.getElementById('bulkCount').innerText = selectedOrderIds.size;
-            } else {
-                bulkActions.classList.add('hidden');
-                bulkActions.classList.remove('flex');
+            if (activeTab === 'details') {
+                if (selectedOrderIds.size > 0) {
+                    bulkActions.style.display = 'flex';
+                    document.getElementById('bulkCount').innerText = selectedOrderIds.size;
+                } else {
+                    bulkActions.style.display = 'none';
+                }
             }
 
             // Filter orders based on search text
@@ -1123,12 +1359,12 @@
             } else if (direction === 'next' && currentPage < totalPages) {
                 currentPage++;
             }
-            renderTable();
+            renderActiveTab();
         }
 
         function handleSearch() {
             currentPage = 1;
-            renderTable();
+            renderActiveTab();
         }
 
         // 6. RENDER DASHBOARD (CHARTS)
@@ -1660,7 +1896,7 @@
             localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
             localStorage.setItem('simpleTrackerStock', JSON.stringify(stockLevels));
-            renderTable();
+            renderActiveTab();
             renderCharts();
         }
 
@@ -2013,6 +2249,17 @@
                 ["Generated On", new Date().toLocaleString()]
             ];
 
+            // 1.5 Prepare Order Summary Data (New Sheet)
+            const summaryTableData = getSummaryData().map(item => ({
+                "Order #": item.customer,
+                "Date In": new Date(item.inTime).toLocaleDateString(),
+                "Time In": new Date(item.inTime).toLocaleTimeString(),
+                "Closed": item.outTime ? new Date(item.outTime).toLocaleString() : '',
+                "SKU Count": item.skuCount,
+                "Total Qty": item.totalQty,
+                "Status": item.status
+            }));
+
             // 2. Prepare Order List Data
             const orderData = orders.map(o => {
                 const skuItem = skuMaster.find(s => s.code === o.sku);
@@ -2068,6 +2315,7 @@
             // Create Workbook and Append Sheets
             const wb = XLSX.utils.book_new();
             const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+            const wsSummaryTable = XLSX.utils.json_to_sheet(summaryTableData);
             const wsOrders = XLSX.utils.json_to_sheet(orderData);
             const wsVelocity = XLSX.utils.json_to_sheet(velocityData);
             const wsHourly = XLSX.utils.json_to_sheet(hourCounts);
@@ -2075,6 +2323,7 @@
             const wsBrand = XLSX.utils.json_to_sheet(brandData);
 
             XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+            XLSX.utils.book_append_sheet(wb, wsSummaryTable, "Order Summary Data");
             XLSX.utils.book_append_sheet(wb, wsOrders, "Order List");
             XLSX.utils.book_append_sheet(wb, wsVelocity, "SKU Velocity");
             XLSX.utils.book_append_sheet(wb, wsHourly, "Hourly Volume");
