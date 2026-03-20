@@ -67,9 +67,22 @@
             --primary-700: #0f766e;
             --primary-800: #115e59;
         }
+        /* Toast Animations */
+        @keyframes slide-in-right {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slide-out-right {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .toast-enter { animation: slide-in-right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast-leave { animation: slide-out-right 0.4s ease-in forwards; }
     </style>
 </head>
 <body class="p-6">
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- LOGIN SCREEN -->
     <div id="login-screen" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
@@ -114,6 +127,7 @@
                 <p class="text-gray-500 text-sm">Manual Entry System</p>
             </div>
             <div class="flex gap-4 items-center">
+                <button onclick="openInventoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📦 Inventory</button>
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
                 <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
                 <button onclick="generateDemoData()" class="text-purple-600 text-sm hover:underline">🎲 Test Data</button>
@@ -256,6 +270,18 @@
                         <canvas id="dailyChart"></canvas>
                     </div>
                 </div>
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">📦 Inventory Health (Days Cover)</h2>
+                    <div class="h-48">
+                        <canvas id="inventoryHealthChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h2 class="text-lg font-bold mb-2 text-gray-700">📊 ABC Classification</h2>
+                    <div class="h-48">
+                        <canvas id="abcChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <!-- SKU MASTER CARD -->
@@ -315,6 +341,44 @@
         </div>
     </div>
 
+    <!-- INVENTORY MODAL -->
+    <div id="inventoryModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">📦 Inventory Health & ABC Analysis</h2>
+                    <p class="text-sm text-gray-500">Monitor Stock on Hand, Days Cover, and Classifications</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="downloadStockSample()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📄 Sample</button>
+                    <button onclick="document.getElementById('stockUploadInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📥 Upload Stock (CSV)</button>
+                    <input type="file" id="stockUploadInput" accept=".csv" onchange="uploadStockLevels(this)" class="hidden">
+                    <button onclick="document.getElementById('inventoryModal').classList.add('hidden')" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                </div>
+            </div>
+            <div class="p-0 overflow-auto flex-grow">
+                <table class="min-w-full text-left text-sm whitespace-nowrap">
+                    <thead class="bg-gray-100 border-b sticky top-0 z-10">
+                        <tr>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b">SKU</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b">Description</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b text-right">Stock on Hand</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b text-right">30d Sales</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b text-right">Daily Avg</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b text-right">Days Cover</th>
+                            <th class="px-6 py-3 font-bold text-gray-700 border-b text-center">ABC Class</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t bg-gray-50 text-xs text-gray-500 flex justify-between">
+                <span>* ABC Classification based on 30-day sales volume (A=Top 80%, B=Next 15%, C=Bottom 5%)</span>
+                <span>* Days Cover = Stock / Daily Avg Usage</span>
+            </div>
+        </div>
+    </div>
+
     </div> <!-- End of #app-container -->
 
     <!-- JAVASCRIPT LOGIC -->
@@ -327,11 +391,14 @@
 
         let orders = JSON.parse(localStorage.getItem('simpleTrackerOrders')) || [];
         let skuMaster = JSON.parse(localStorage.getItem('simpleTrackerSkuMaster')) || [];
+        let stockLevels = JSON.parse(localStorage.getItem('simpleTrackerStock')) || {};
         let velocityChartInstance = null;
         let selectedOrderIds = new Set();
         let hourlyChartInstance = null;
         let dailyChartInstance = null;
         let brandChartInstance = null;
+        let inventoryHealthChartInstance = null;
+        let abcChartInstance = null;
         let liveDurationInterval = null;
         let currentSort = { column: 'inTime', direction: 'desc' };
         let isBannerDismissed = false;
@@ -556,7 +623,7 @@
                     order.outTime = newDate.toISOString();
                     saveData();
                 } else {
-                    alert("Invalid date format.");
+                    showToast("Invalid date format.", "error");
                 }
             }
         }
@@ -863,7 +930,7 @@
             else if(action === 'cancel') actionText = 'Cancelled';
             else if(action === 'delete') actionText = 'Deleted';
             
-            alert(`${actionText} ${count} orders.`);
+            showToast(`${actionText} ${count} orders.`, "success");
         }
 
         function renderPaginationControls(totalItems, totalPages) {
@@ -1092,12 +1159,233 @@
                     plugins: { legend: { position: 'right' } }
                 }
             });
+
+            // --- 5. Inventory Health & ABC Charts ---
+            // Calculate 30d Sales & Stock metrics
+            const sales30d = {};
+            const cutoff = new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
+            
+            orders.forEach(o => {
+                if (o.status !== 'CANCELLED' && new Date(o.inTime) >= cutoff) {
+                    sales30d[o.sku] = (sales30d[o.sku] || 0) + o.qty;
+                }
+            });
+
+            const uniqueSkus = Array.from(new Set([...skuMaster.map(s => s.code), ...Object.keys(stockLevels)]));
+            const coverBuckets = { 'Stockout': 0, 'Critical (<7d)': 0, 'Low (7-14d)': 0, 'Healthy (15-60d)': 0, 'Overstock (>60d)': 0, 'No Sales': 0 };
+            const skuSalesList = [];
+
+            uniqueSkus.forEach(sku => {
+                const stock = stockLevels[sku] || 0;
+                const sold = sales30d[sku] || 0;
+                skuSalesList.push({ sku, sold });
+
+                const dailyAvg = sold / 30;
+                if (stock <= 0) coverBuckets['Stockout']++;
+                else if (dailyAvg === 0) coverBuckets['No Sales']++;
+                else {
+                    const days = stock / dailyAvg;
+                    if (days < 7) coverBuckets['Critical (<7d)']++;
+                    else if (days < 14) coverBuckets['Low (7-14d)']++;
+                    else if (days < 60) coverBuckets['Healthy (15-60d)']++;
+                    else coverBuckets['Overstock (>60d)']++;
+                }
+            });
+
+            const ctxHealth = document.getElementById('inventoryHealthChart').getContext('2d');
+            if (inventoryHealthChartInstance) inventoryHealthChartInstance.destroy();
+            inventoryHealthChartInstance = new Chart(ctxHealth, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(coverBuckets),
+                    datasets: [{
+                        label: 'SKU Count',
+                        data: Object.values(coverBuckets),
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#9ca3af']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            // ABC Calc
+            skuSalesList.sort((a, b) => b.sold - a.sold);
+            const totalSoldABC = skuSalesList.reduce((acc, curr) => acc + curr.sold, 0);
+            let runningABC = 0;
+            const abcCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+
+            skuSalesList.forEach(item => {
+                if (item.sold > 0) {
+                    runningABC += item.sold;
+                    const pct = runningABC / totalSoldABC;
+                    if (pct <= 0.80) abcCounts['A']++;
+                    else if (pct <= 0.95) abcCounts['B']++;
+                    else abcCounts['C']++;
+                } else {
+                    abcCounts['D']++;
+                }
+            });
+
+            const ctxAbc = document.getElementById('abcChart').getContext('2d');
+            if (abcChartInstance) abcChartInstance.destroy();
+            abcChartInstance = new Chart(ctxAbc, {
+                type: 'doughnut',
+                data: {
+                    labels: ['A (Top 80%)', 'B (Next 15%)', 'C (Bottom 5%)', 'D (No Sales)'],
+                    datasets: [{
+                        data: [abcCounts['A'], abcCounts['B'], abcCounts['C'], abcCounts['D']],
+                        backgroundColor: ['#22c55e', '#3b82f6', '#eab308', '#9ca3af']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+        }
+
+        // 6.5 INVENTORY & ABC ANALYSIS
+        function openInventoryModal() {
+            document.getElementById('inventoryModal').classList.remove('hidden');
+            renderInventoryTable();
+        }
+
+        function downloadStockSample() {
+            const headers = "SKU,Quantity\n";
+            const sample = "A-001,150\nB-005,20\nC-010,0";
+            const blob = new Blob([headers + sample], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'stock_import_template.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function uploadStockLevels(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                let count = 0;
+
+                // Reset stock or merge? Let's merge/overwrite existing SKUs
+                // stockLevels is an object { "SKU": Quantity }
+                
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        // CSV Format: SKU, Quantity
+                        const sku = parts[0].trim().toUpperCase();
+                        const qtyStr = parts[1].trim();
+                        const qty = parseInt(qtyStr);
+
+                        if (sku && !isNaN(qty) && sku !== 'SKU') {
+                            stockLevels[sku] = qty;
+                            count++;
+                            
+                            // Add to Master if new
+                            if (!skuMaster.find(s => s.code === sku)) {
+                                skuMaster.push({ code: sku, desc: 'Imported via Stock', brand: '' });
+                            }
+                        }
+                    }
+                });
+
+                saveData();
+                renderInventoryTable();
+                showToast(`Successfully updated stock for ${count} SKUs.`, 'success');
+                input.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+
+            // 1. Calculate Sales Velocity (Last 30 Days)
+            const sales30d = {};
+            const now = new Date();
+            const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+            orders.forEach(o => {
+                if (o.status !== 'CANCELLED' && new Date(o.inTime) >= cutoff) {
+                    sales30d[o.sku] = (sales30d[o.sku] || 0) + o.qty;
+                }
+            });
+
+            // 2. Prepare Data List (Combine SkuMaster + Stock + Sales)
+            let inventoryList = skuMaster.map(s => {
+                const sku = s.code;
+                const stock = stockLevels[sku] || 0;
+                const sold30 = sales30d[sku] || 0;
+                return { ...s, stock, sold30 };
+            });
+            
+            // Include SKUs that might be in stock/sales but not in master (edge case cleanup)
+            // (Skipping for brevity as logic handles master update on upload)
+
+            // 3. Calculate ABC Classification
+            // Sort by Sales Volume Descending
+            inventoryList.sort((a, b) => b.sold30 - a.sold30);
+            
+            const totalSales = inventoryList.reduce((acc, curr) => acc + curr.sold30, 0);
+            let runningSum = 0;
+
+            inventoryList.forEach(item => {
+                const dailyAvg = item.sold30 / 30;
+                item.dailyAvg = dailyAvg;
+                
+                // Days Cover
+                if (item.stock <= 0) item.cover = 0;
+                else if (dailyAvg === 0) item.cover = 999; // Infinite cover
+                else item.cover = Math.round(item.stock / dailyAvg);
+
+                // ABC
+                if (item.sold30 > 0) {
+                    runningSum += item.sold30;
+                    const pct = runningSum / totalSales;
+                    if (pct <= 0.80) item.abc = 'A';
+                    else if (pct <= 0.95) item.abc = 'B';
+                    else item.abc = 'C';
+                } else {
+                    item.abc = 'D'; // Dead stock / No sales
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                
+                let coverClass = 'text-gray-700';
+                let coverText = item.cover === 999 ? '> 999 days' : `${item.cover} days`;
+                
+                if (item.cover < 7 && item.dailyAvg > 0) coverClass = 'text-red-600 font-bold'; // Critical low
+                else if (item.cover < 14 && item.dailyAvg > 0) coverClass = 'text-yellow-600 font-bold'; // Warning
+
+                let abcColor = 'bg-gray-100 text-gray-600';
+                if (item.abc === 'A') abcColor = 'bg-green-100 text-green-800';
+                if (item.abc === 'B') abcColor = 'bg-blue-100 text-blue-800';
+                if (item.abc === 'C') abcColor = 'bg-yellow-100 text-yellow-800';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-3 border-b font-medium">${item.code}</td>
+                    <td class="px-6 py-3 border-b text-gray-500 text-xs">${item.desc}</td>
+                    <td class="px-6 py-3 border-b text-right">${item.stock}</td>
+                    <td class="px-6 py-3 border-b text-right">${item.sold30}</td>
+                    <td class="px-6 py-3 border-b text-right text-xs text-gray-500">${item.dailyAvg.toFixed(2)} / day</td>
+                    <td class="px-6 py-3 border-b text-right ${coverClass}">${coverText}</td>
+                    <td class="px-6 py-3 border-b text-center"><span class="${abcColor} px-2 py-1 rounded text-xs font-bold">${item.abc}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         // 7. UTILITIES
         function saveData() {
             localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
+            localStorage.setItem('simpleTrackerStock', JSON.stringify(stockLevels));
             renderTable();
             renderCharts();
         }
@@ -1106,8 +1394,10 @@
             if(confirm("Are you sure you want to clear all data? This cannot be undone.")) {
                 localStorage.removeItem('simpleTrackerOrders');
                 localStorage.removeItem('simpleTrackerSkuMaster');
+                localStorage.removeItem('simpleTrackerStock');
                 orders = [];
                 skuMaster = [];
+                stockLevels = {};
                 initializeApp(); // Use initializeApp to fully reset the view
             }
         }
@@ -1127,6 +1417,19 @@
                 { code: 'SKN-302', desc: 'Hyaluronic Acid Moisturizer', brand: 'GlowUp' },
                 { code: 'BLH-401', desc: 'Rose Petal Blush', brand: 'Luxe' },
             ];
+
+            // 1.5 Define Demo Stock Levels
+            const demoStock = {
+                'LIP-001': 150,
+                'LIP-002': 20,  // Low stock
+                'FND-101': 500, // High stock
+                'FND-105': 80,
+                'EYE-201': 5,   // Critical
+                'EYE-202': 200,
+                'SKN-301': 0,   // Out of stock
+                'SKN-302': 45,
+                'BLH-401': 300
+            };
 
             // 2. Define Demo Orders
             const demoOrders = [];
@@ -1155,13 +1458,15 @@
 
             // 3. Update State and Local Storage
             skuMaster = demoSkuMaster;
+            stockLevels = demoStock;
             orders = demoOrders.sort((a, b) => new Date(b.inTime) - new Date(a.inTime));
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
             localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
+            localStorage.setItem('simpleTrackerStock', JSON.stringify(stockLevels));
 
             // 4. Re-render everything
             initializeApp();
-            alert('Demo data has been loaded.');
+            showToast('Demo data has been loaded.', 'success');
         }
 
         function renderStats() {
@@ -1384,7 +1689,7 @@
                 localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
                 renderSkuMaster();
                 renderCharts(); // Update charts immediately
-                alert(`Upload complete. Added: ${addedCount} new SKUs. Updated: ${updatedCount} existing SKUs.`);
+                showToast(`Upload complete.<br>Added: ${addedCount} new SKUs.<br>Updated: ${updatedCount} existing SKUs.`, "success");
                 input.value = ''; // Reset
             };
             reader.readAsText(file);
@@ -1589,7 +1894,10 @@
                 if (skippedCount > 0) {
                     alertMessage += `\nSkipped ${skippedCount} duplicate items (same Order # and SKU).`;
                 }
-                alert(alertMessage);
+                
+                // Convert newlines to breaks for toast
+                const type = skippedCount > 0 ? 'warning' : 'success';
+                showToast(alertMessage, type);
                 input.value = '';
             };
             reader.readAsText(file);
@@ -1617,6 +1925,42 @@
             const isHidden = content.classList.contains('hidden');
             btn.textContent = isHidden ? '[Show]' : '[Hide]';
             localStorage.setItem('skuMasterHidden', String(isHidden));
+        }
+
+        // 10. TOAST NOTIFICATIONS
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            // Icon and Color mapping
+            const config = {
+                success: { icon: '✅', bg: 'bg-green-600' },
+                error:   { icon: '❌', bg: 'bg-red-600' },
+                warning: { icon: '⚠️', bg: 'bg-yellow-600' },
+                info:    { icon: 'ℹ️', bg: 'bg-blue-600' }
+            }[type] || { icon: 'ℹ️', bg: 'bg-gray-700' };
+
+            // Tailwind styling
+            toast.className = `${config.bg} text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3 min-w-[300px] max-w-md transform transition-all duration-300 hover:scale-105 cursor-pointer pointer-events-auto toast-enter`;
+            
+            // Replace newlines with breaks if not already present
+            const formattedMessage = message.includes('<br>') ? message : message.replace(/\n/g, '<br>');
+            
+            toast.innerHTML = `
+                <span class="text-lg mt-0.5">${config.icon}</span>
+                <div class="flex-grow">
+                    <p class="text-sm font-medium leading-tight">${formattedMessage}</p>
+                </div>
+            `;
+
+            const removeToast = () => {
+                toast.classList.add('toast-leave');
+                toast.addEventListener('animationend', () => toast.remove());
+            };
+
+            toast.onclick = removeToast;
+            setTimeout(removeToast, 4000); // Auto remove after 4 seconds
+            container.appendChild(toast);
         }
     </script>
 
