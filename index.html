@@ -580,6 +580,7 @@
 
         // 2. INITIALIZATION
         document.addEventListener('DOMContentLoaded', () => {
+            startClock();
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
             checkLoginState();
             
@@ -590,7 +591,6 @@
             } else if (savedTheme === 'teal') {
                 document.body.classList.add('theme-teal');
             }
-            startClock();
         });
 
         function checkLoginState() {
@@ -1496,6 +1496,7 @@
 
         // 6. RENDER DASHBOARD (CHARTS)
         function renderCharts() {
+            if (typeof Chart === 'undefined') return;
             // --- 1. Velocity Chart (Fast Moving SKUs) ---
             const skuData = {};
             
