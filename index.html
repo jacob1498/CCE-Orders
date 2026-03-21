@@ -2184,13 +2184,31 @@
             let titleText = '';
             const now = new Date();
 
+            // Filter orders based on the selected date range
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
+            let listOrders = orders;
+
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+                listOrders = orders.filter(o => {
+                    const orderDate = new Date(o.inTime);
+                    if (fromDate && orderDate < fromDate) return false;
+                    if (toDate && orderDate > toDate) return false;
+                    return true;
+                });
+            }
+
             switch(filterType) {
-                case 'total': filtered = orders; titleText = 'Total Orders'; break;
-                case 'pending': filtered = orders.filter(o => !o.outTime && o.status !== 'CANCELLED'); titleText = 'In Process Orders'; break;
-                case 'completed': filtered = orders.filter(o => o.outTime && o.status !== 'CANCELLED'); titleText = 'Completed Orders'; break;
-                case 'cancelled': filtered = orders.filter(o => o.status === 'CANCELLED'); titleText = 'Cancelled Orders'; break;
+                case 'total': filtered = listOrders; titleText = 'Total Orders'; break;
+                case 'pending': filtered = listOrders.filter(o => !o.outTime && o.status !== 'CANCELLED'); titleText = 'In Process Orders'; break;
+                case 'completed': filtered = listOrders.filter(o => o.outTime && o.status !== 'CANCELLED'); titleText = 'Completed Orders'; break;
+                case 'cancelled': filtered = listOrders.filter(o => o.status === 'CANCELLED'); titleText = 'Cancelled Orders'; break;
                 case 'overdue': 
-                    filtered = orders.filter(o => {
+                    filtered = listOrders.filter(o => {
                         if (o.status === 'CANCELLED') return false;
                         const start = new Date(o.inTime);
                         const end = o.outTime ? new Date(o.outTime) : now;
