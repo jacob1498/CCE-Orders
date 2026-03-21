@@ -2374,7 +2374,7 @@
 
                     // Regex for DD/MM/YYYY or DD-MM-YYYY with optional time
                     // Matches: 25/10/2023 14:30 or 25-10-2023
-                    const dmy = str.match(/^(\d{1,2})\/\-\/\-(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+                    const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
                     if (dmy) {
                         // Construct Date using local time components (Year, Month 0-idx, Day, Hour, Min, Sec)
                         return new Date(
