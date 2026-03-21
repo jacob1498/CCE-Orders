@@ -152,36 +152,52 @@
     
         <!-- SUMMARY CARDS -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-        <div onclick="viewSummaryList('total')" class="card p-4 border-l-4 border-primary-500 bg-primary-50 cursor-pointer hover:shadow-lg transition-all">
-            <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
-            <p class="text-2xl font-bold text-gray-800" id="statTotal">0</p>
-        </div>
-        <div onclick="viewSummaryList('pending')" class="card p-4 border-l-4 border-yellow-500 bg-yellow-50 cursor-pointer hover:shadow-lg transition-all">
-            <p class="text-xs text-gray-500 font-bold uppercase">In Process</p>
-            <div class="flex justify-between items-baseline">
-                <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
-                <p class="text-xs text-gray-500 font-bold" id="statPendingPct">0%</p>
+            <div onclick="viewSummaryList('total')" class="card p-4 border-l-4 border-primary-500 bg-primary-50 cursor-pointer hover:shadow-lg transition-all">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📦</span>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Total Orders</p>
+                </div>
+                <p class="text-2xl font-bold text-gray-800 mt-1" id="statTotal">0</p>
             </div>
-        </div>
-        <div onclick="viewSummaryList('completed')" class="card p-4 border-l-4 border-green-500 bg-green-50 cursor-pointer hover:shadow-lg transition-all">
-            <p class="text-xs text-gray-500 font-bold uppercase">Completed</p>
-            <div class="flex justify-between items-baseline">
-                <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
-                <p class="text-xs text-gray-500 font-bold" id="statCompletedPct">0%</p>
+            <div onclick="viewSummaryList('pending')" class="card p-4 border-l-4 border-yellow-500 bg-yellow-50 cursor-pointer hover:shadow-lg transition-all">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⏳</span>
+                    <p class="text-xs text-gray-500 font-bold uppercase">In Process</p>
+                </div>
+                <div class="flex justify-between items-baseline mt-1">
+                    <p class="text-2xl font-bold text-gray-800" id="statPending">0</p>
+                    <p class="text-xs text-gray-500 font-bold" id="statPendingPct">0%</p>
+                </div>
             </div>
-        </div>
-        <div onclick="viewSummaryList('overdue')" id="cardOverdue" class="card p-4 border-l-4 border-red-500 bg-red-50 transition-colors cursor-pointer hover:shadow-lg">
-            <p class="text-xs text-gray-500 font-bold uppercase">Overdue (>30m)</p>
-            <div class="flex justify-between items-baseline">
-                <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
-                <p class="text-xs text-gray-500 font-bold" id="statOverduePct">0%</p>
+            <div onclick="viewSummaryList('completed')" class="card p-4 border-l-4 border-green-500 bg-green-50 cursor-pointer hover:shadow-lg transition-all">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">✅</span>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Completed</p>
+                </div>
+                <div class="flex justify-between items-baseline mt-1">
+                    <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
+                    <p class="text-xs text-gray-500 font-bold" id="statCompletedPct">0%</p>
+                </div>
             </div>
-        </div>
-        <div onclick="viewSummaryList('cancelled')" class="card p-4 border-l-4 border-gray-500 bg-gray-50 cursor-pointer hover:shadow-lg transition-all">
-            <p class="text-xs text-gray-500 font-bold uppercase">Cancelled</p>
-            <div class="flex justify-between items-baseline">
-                <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
-                <p class="text-xs text-gray-500 font-bold" id="statCancelledPct">0%</p>
+            <div onclick="viewSummaryList('overdue')" id="cardOverdue" class="card p-4 border-l-4 border-red-500 bg-red-50 transition-colors cursor-pointer hover:shadow-lg">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🔥</span>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Overdue (>30m)</p>
+                </div>
+                <div class="flex justify-between items-baseline mt-1">
+                    <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
+                    <p class="text-xs text-gray-500 font-bold" id="statOverduePct">0%</p>
+                </div>
+            </div>
+            <div onclick="viewSummaryList('cancelled')" class="card p-4 border-l-4 border-gray-500 bg-gray-50 cursor-pointer hover:shadow-lg transition-all">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">❌</span>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Cancelled</p>
+                </div>
+                <div class="flex justify-between items-baseline mt-1">
+                    <p class="text-2xl font-bold text-gray-800" id="statCancelled">0</p>
+                    <p class="text-xs text-gray-500 font-bold" id="statCancelledPct">0%</p>
+                </div>
             </div>
         </div>
     </div>
