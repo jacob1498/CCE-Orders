@@ -560,6 +560,16 @@
         </div>
     </div>
 
+    <!-- IMAGE VIEWER MODAL -->
+    <div id="imageModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-[60]">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg relative animate-fade-in p-4">
+            <button onclick="closeImageModal()" class="absolute -top-3 -right-3 bg-white rounded-full h-8 w-8 flex items-center justify-center text-gray-700 hover:text-red-500 shadow-lg text-2xl">&times;</button>
+            <img id="modalImage" src="" class="max-w-full max-h-[80vh] mx-auto rounded" alt="SKU Image">
+            <p id="modalImageSku" class="text-center font-bold text-gray-800 mt-2"></p>
+            <p id="modalImageDesc" class="text-center text-sm text-gray-500"></p>
+        </div>
+    </div>
+
     </div> <!-- End of #app-container -->
 
     <!-- JAVASCRIPT LOGIC -->
@@ -1049,6 +1059,28 @@
             }
         }
 
+        function openImageModal(skuCode) {
+            const skuItem = skuMaster.find(s => s.code === skuCode);
+            if (skuItem && skuItem.img) {
+                const modal = document.getElementById('imageModal');
+                const imgEl = document.getElementById('modalImage');
+                const skuEl = document.getElementById('modalImageSku');
+                const descEl = document.getElementById('modalImageDesc');
+
+                imgEl.src = skuItem.img;
+                imgEl.alt = `Image for ${skuItem.code}`;
+                skuEl.textContent = skuItem.code;
+                descEl.textContent = skuItem.desc;
+                modal.classList.remove('hidden');
+            } else {
+                showToast(`No image available for SKU: ${skuCode}`, 'info');
+            }
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
         function dismissBanner() {
             isBannerDismissed = true;
             document.getElementById('overdueBanner').classList.add('-translate-y-full');
@@ -1358,7 +1390,7 @@
                         <input type="checkbox" onchange="toggleOrderSelection(${order.id})" ${isSelected ? 'checked' : ''} class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                     </td>
                     <td class="px-4 py-3 font-medium text-gray-900 border-l border-gray-200">${order.customer}</td>
-                    <td class="px-4 py-3 border-l border-gray-200"><span class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded">${order.sku}</span></td>
+                    <td class="px-4 py-3 border-l border-gray-200"><button onclick="openImageModal('${order.sku}')" title="View Image" class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded hover:ring-2 hover:ring-primary-500 transition-all">${order.sku}</button></td>
                     <td class="px-4 py-3 text-gray-600 text-xs border-l border-gray-200">${displayBrand}</td>
                     <td class="px-4 py-3 text-gray-500 text-xs border-l border-gray-200"><div class="flex items-center" title="${titleText}">${imgHtml}<span class="truncate max-w-[150px]">${descriptionText || '-'}</span></div></td>
                     <td class="px-4 py-3 border-l border-gray-200">${order.qty}</td>
