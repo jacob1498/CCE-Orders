@@ -194,6 +194,17 @@
                             <button onclick="performBulkAction('cancel')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded shadow-sm">Cancel</button>
                             <button onclick="performBulkAction('delete')" class="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded shadow-sm">Delete</button>
                         </div>
+                        <div class="flex items-center gap-2 border-l border-gray-300 pl-2 ml-2">
+                            <label for="dateFrom" class="text-xs font-medium text-gray-600">From:</label>
+                            <input type="date" id="dateFrom" onchange="handleSearch()" class="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 w-36">
+                            <label for="dateTo" class="text-xs font-medium text-gray-600">To:</label>
+                            <input type="date" id="dateTo" onchange="handleSearch()" class="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 w-36">
+                            <button onclick="clearDateFilter()" class="text-gray-400 hover:text-red-500" title="Clear Date Filter">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
                         <div class="flex gap-1">
                             <button onclick="downloadOrderSample()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1.5 rounded border border-gray-300 flex items-center gap-1 whitespace-nowrap" title="Download Template">📄 Sample</button>
                             <button onclick="document.getElementById('orderUploadInput').click()" class="text-xs bg-primary-100 hover:bg-primary-200 text-primary-700 px-2 py-1.5 rounded border border-primary-200 flex items-center gap-1 whitespace-nowrap" title="Import CSV">📥 Import</button>
@@ -501,6 +512,7 @@
         let liveDurationInterval = null;
         let currentSort = { column: 'inTime', direction: 'desc' };
         let isBannerDismissed = false;
+        let autoRefreshInterval = null;
         let lastOverdueCount = 0;
         let velocityMetric = 'qty';
         let brandMetric = 'qty';
@@ -551,6 +563,7 @@
         function handleLogout() {
             sessionStorage.removeItem('isLoggedIn');
             if (liveDurationInterval) clearInterval(liveDurationInterval);
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
             showLogin();
         }
 
@@ -569,12 +582,16 @@
         function initializeApp() {
             renderActiveTab();
             renderCharts();
+            setDefaultDateFilters();
             renderSkuMaster();
             applyInitialSkuMasterState();
             applyInitialLayoutState();
             
             if (liveDurationInterval) clearInterval(liveDurationInterval);
             liveDurationInterval = setInterval(updateLiveDurations, 1000);
+
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(autoRefreshData, 60000); // Refresh every 60 seconds
         }
 
         function startClock() {
@@ -1023,7 +1040,25 @@
             const tbody = document.getElementById('summaryTableBody');
             tbody.innerHTML = '';
 
-            const allSummaryData = getSummaryData();
+            let allSummaryData = getSummaryData();
+
+            // Date Filter
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
+
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+
+                allSummaryData = allSummaryData.filter(item => {
+                    const itemDate = new Date(item.inTime);
+                    if (fromDate && itemDate < fromDate) return false;
+                    if (toDate && itemDate > toDate) return false;
+                    return true;
+                });
+            }
 
             // Filter by Order #
             const searchInput = document.getElementById('searchInput');
@@ -1065,15 +1100,32 @@
         function getFilteredOrders() {
             const searchInput = document.getElementById('searchInput');
             const filterText = searchInput ? searchInput.value.toLowerCase() : '';
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
             
-            // Filter
-            const filtered = orders.filter(order => {
+            // Text Filter
+            let filtered = orders.filter(order => {
                 const skuItem = skuMaster.find(s => s.code === order.sku);
                 const description = skuItem ? skuItem.desc : '';
                 const brand = skuItem ? (skuItem.brand || '') : '';
                 const matchString = (order.customer + ' ' + order.sku + ' ' + description + ' ' + brand).toLowerCase();
                 return !filterText || matchString.includes(filterText);
             });
+
+            // Date Filter
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+                
+                filtered = filtered.filter(order => {
+                    const orderDate = new Date(order.inTime);
+                    if (fromDate && orderDate < fromDate) return false;
+                    if (toDate && orderDate > toDate) return false;
+                    return true;
+                });
+            }
 
             // Sort
             filtered.sort((a, b) => {
@@ -1910,6 +1962,61 @@
         }
 
         // 7. UTILITIES
+        function autoRefreshData() {
+            // Don't refresh if a modal is open to avoid disrupting user input
+            if (!document.getElementById('orderModal').classList.contains('hidden') ||
+                !document.getElementById('editOrderModal').classList.contains('hidden') ||
+                !document.getElementById('inventoryModal').classList.contains('hidden') ||
+                !document.getElementById('summaryListModal').classList.contains('hidden')) {
+                // Silently skip refresh to avoid bothering user
+                return;
+            }
+
+            // Re-load data from localStorage to sync across tabs
+            orders = JSON.parse(localStorage.getItem('simpleTrackerOrders')) || [];
+            skuMaster = JSON.parse(localStorage.getItem('simpleTrackerSkuMaster')) || [];
+            stockLevels = JSON.parse(localStorage.getItem('simpleTrackerStock')) || {};
+
+            // Re-render the UI
+            renderActiveTab();
+            renderCharts();
+            renderSkuMaster();
+            showToast('Data refreshed automatically.', 'info');
+        }
+
+        function setDefaultDateFilters() {
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            if (!dateFromInput || !dateToInput) return;
+
+            // Helper to format date as YYYY-MM-DD
+            const toYYYYMMDD = (d) => {
+                const year = d.getFullYear();
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const day = d.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            if (orders.length > 0) {
+                const oldestDate = orders.reduce((oldest, order) => {
+                    const orderDate = new Date(order.inTime);
+                    return orderDate < oldest ? orderDate : oldest;
+                }, new Date());
+
+                dateFromInput.value = toYYYYMMDD(oldestDate);
+            } else {
+                dateFromInput.value = '';
+            }
+
+            dateToInput.value = toYYYYMMDD(new Date());
+        }
+
+        function clearDateFilter() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            handleSearch(); // Re-render
+        }
+
         function saveData() {
             localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
