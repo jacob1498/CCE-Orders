@@ -178,6 +178,7 @@
                     <p class="text-2xl font-bold text-gray-800" id="statCompleted">0</p>
                     <p class="text-xs text-gray-500 font-bold" id="statCompletedPct">0%</p>
                 </div>
+                <p class="text-[10px] text-gray-400 mt-1 text-right" id="statCompletedAvg">Avg: -</p>
             </div>
             <div onclick="viewSummaryList('overdue')" id="cardOverdue" class="card p-4 border-l-4 border-red-500 bg-red-50 transition-colors cursor-pointer hover:shadow-lg">
                 <div class="flex items-center gap-2">
@@ -188,6 +189,7 @@
                     <p class="text-2xl font-bold text-gray-800" id="statOverdue">0</p>
                     <p class="text-xs text-gray-500 font-bold" id="statOverduePct">0%</p>
                 </div>
+                <p class="text-[10px] text-red-800 mt-1 text-right" id="statOverdueAvg">Avg: -</p>
             </div>
             <div onclick="viewSummaryList('cancelled')" class="card p-4 border-l-4 border-gray-500 bg-gray-50 cursor-pointer hover:shadow-lg transition-all">
                 <div class="flex items-center gap-2">
@@ -379,7 +381,7 @@
                 <h2 class="text-xl font-bold">Create Multi-Item Order</h2>
                 <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <form id="modalOrderForm" onsubmit="submitMultiOrder(event)" class="flex-grow flex flex-col">
+            <form id="modalOrderForm" onsubmit="submitMultiOrder(event)" class="flex-grow flex flex-col min-h-0">
                 <div class="p-6 flex-grow overflow-y-auto">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Customer Order Number</label>
@@ -519,6 +521,8 @@
                             <th class="px-6 py-3 font-bold text-gray-700">Description</th>
                             <th class="px-6 py-3 font-bold text-gray-700">Qty</th>
                             <th class="px-6 py-3 font-bold text-gray-700">Time In</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">Duration</th>
+                            <th class="px-6 py-3 font-bold text-gray-700">Completed</th>
                             <th class="px-6 py-3 font-bold text-gray-700 text-right">Action</th>
                         </tr>
                     </thead>
@@ -878,7 +882,12 @@
             orders.unshift(...newOrders);
             
             saveData();
-            closeModal();
+            // Keep modal open and reset for next entry
+            document.getElementById('modalOrderForm').reset();
+            document.getElementById('skuRowsContainer').innerHTML = '';
+            addSkuRow();
+            document.getElementById('modalTotalQty').innerText = '0';
+            document.getElementById('modalCustomer').focus();
             showToast("Order created successfully.", "success");
         }
 
@@ -2233,9 +2242,22 @@
                 const desc = skuItem ? skuItem.desc : '-';
                 const isComplete = order.outTime !== null;
                 const isCancelled = order.status === 'CANCELLED';
+                
+                let durationStr = '-';
+                let completedStr = '-';
+
+                if (isComplete) {
+                    const diff = new Date(order.outTime) - new Date(order.inTime);
+                    durationStr = Math.floor(diff / 60000) + 'm';
+                    completedStr = new Date(order.outTime).toLocaleString();
+                } else if (!isCancelled) {
+                    const diff = new Date() - new Date(order.inTime);
+                    durationStr = Math.floor(diff / 60000) + 'm (Run)';
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = isCancelled ? 'bg-red-50 text-gray-500' : (isComplete ? 'bg-gray-50 text-gray-600' : 'bg-white hover:bg-gray-50');
-                tr.innerHTML = `<td class="px-6 py-3 font-medium border-b">${order.customer}</td><td class="px-6 py-3 font-bold border-b">${order.sku}</td><td class="px-6 py-3 text-xs truncate max-w-[200px] border-b" title="${desc}">${desc}</td><td class="px-6 py-3 border-b">${order.qty}</td><td class="px-6 py-3 text-xs border-b">${new Date(order.inTime).toLocaleString()}</td><td class="px-6 py-3 text-right border-b">${!isComplete && !isCancelled ? `<button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded shadow">Out</button><button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow ml-1">✕</button>` : (isCancelled ? '<span class="text-xs italic text-red-400">Cancelled</span>' : '<span class="text-xs text-gray-400">Completed</span>')}</td>`;
+                tr.innerHTML = `<td class="px-6 py-3 font-medium border-b">${order.customer}</td><td class="px-6 py-3 font-bold border-b">${order.sku}</td><td class="px-6 py-3 text-xs truncate max-w-[200px] border-b" title="${desc}">${desc}</td><td class="px-6 py-3 border-b">${order.qty}</td><td class="px-6 py-3 text-xs border-b">${new Date(order.inTime).toLocaleString()}</td><td class="px-6 py-3 text-xs border-b font-mono">${durationStr}</td><td class="px-6 py-3 text-xs border-b">${completedStr}</td><td class="px-6 py-3 text-right border-b">${!isComplete && !isCancelled ? `<button onclick="completeOrder(${order.id})" class="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1 px-2 rounded shadow">Out</button><button onclick="cancelOrder(${order.id})" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-1 px-2 rounded shadow ml-1">✕</button>` : (isCancelled ? '<span class="text-xs italic text-red-400">Cancelled</span>' : '<span class="text-xs text-gray-400">Completed</span>')}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -2352,6 +2374,11 @@
             let cancelled = 0;
             let overdue = 0;
             
+            let completedDurationTotal = 0;
+            let completedCount = 0; 
+            let overdueDurationTotal = 0;
+            let overdueCount = 0;
+            
             const now = new Date();
 
             for (const cust in orderGroups) {
@@ -2367,7 +2394,14 @@
                 
                 if (hasActive) pending++;
                 else if (isFullyCancelled) cancelled++;
-                else completed++;
+                else {
+                    completed++;
+                    completedCount++;
+                    // Duration for completed order (Max Out - Min In)
+                    const start = Math.min(...items.map(i => new Date(i.inTime).getTime()));
+                    const end = Math.max(...items.map(i => new Date(i.outTime).getTime()));
+                    completedDurationTotal += (end - start);
+                }
 
                 // Overdue logic: If any item in the order is/was overdue
                 const isOverdue = items.some(o => {
@@ -2376,7 +2410,14 @@
                     const end = o.outTime ? new Date(o.outTime) : now;
                     return (end - start) / 60000 > 30;
                 });
-                if (isOverdue) overdue++;
+                if (isOverdue) {
+                    overdue++;
+                    overdueCount++;
+                    // Duration: if active, use Now. If closed, use Max Out.
+                    const start = Math.min(...items.map(i => new Date(i.inTime).getTime()));
+                    const end = hasActive ? now.getTime() : Math.max(...items.map(i => i.outTime ? new Date(i.outTime).getTime() : 0));
+                    overdueDurationTotal += (end - start);
+                }
             }
 
             document.getElementById('statTotal').innerText = total;
@@ -2390,6 +2431,13 @@
             document.getElementById('statCompletedPct').innerText = getPct(completed);
             document.getElementById('statOverduePct').innerText = getPct(overdue);
             document.getElementById('statCancelledPct').innerText = getPct(cancelled);
+            
+            // Update Averages
+            const avgComp = completedCount > 0 ? Math.round((completedDurationTotal / completedCount) / 60000) : 0;
+            document.getElementById('statCompletedAvg').innerText = `Avg: ${avgComp}m`;
+
+            const avgOver = overdueCount > 0 ? Math.round((overdueDurationTotal / overdueCount) / 60000) : 0;
+            document.getElementById('statOverdueAvg').innerText = `Avg: ${avgOver}m`;
 
             // Update Overdue Banner
             const banner = document.getElementById('overdueBanner');
