@@ -1059,6 +1059,12 @@
             }
         }
 
+        function openWatsonsImage(sku) {
+            const version = Date.now();
+            const url = `https://medias.watsons.com.ph/publishing/WTCPH-${sku}-front-zoom.jpg?version=${version}`;
+            window.open(url, '_blank');
+        }
+
         function openImageModal(skuCode) {
             const skuItem = skuMaster.find(s => s.code === skuCode);
             if (skuItem && skuItem.img) {
@@ -1390,7 +1396,7 @@
                         <input type="checkbox" onchange="toggleOrderSelection(${order.id})" ${isSelected ? 'checked' : ''} class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                     </td>
                     <td class="px-4 py-3 font-medium text-gray-900 border-l border-gray-200">${order.customer}</td>
-                    <td class="px-4 py-3 border-l border-gray-200"><button onclick="openImageModal('${order.sku}')" title="View Image" class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded hover:ring-2 hover:ring-primary-500 transition-all">${order.sku}</button></td>
+                    <td class="px-4 py-3 border-l border-gray-200"><button onclick="openWatsonsImage('${order.sku}')" title="View Product Image on Watsons" class="${isCancelled ? 'bg-gray-200 text-gray-600' : 'bg-primary-100 text-primary-800'} text-xs font-semibold px-2 py-0.5 rounded hover:ring-2 hover:ring-primary-500 transition-all">${order.sku}</button></td>
                     <td class="px-4 py-3 text-gray-600 text-xs border-l border-gray-200">${displayBrand}</td>
                     <td class="px-4 py-3 text-gray-500 text-xs border-l border-gray-200"><div class="flex items-center" title="${titleText}">${imgHtml}<span class="truncate max-w-[150px]">${descriptionText || '-'}</span></div></td>
                     <td class="px-4 py-3 border-l border-gray-200">${order.qty}</td>
