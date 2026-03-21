@@ -250,7 +250,6 @@
                                 <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('brand')">Brand <span id="sort-brand" class="sort-icon text-gray-400">↕</span></th>
                                 <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('description')">Description <span id="sort-description" class="sort-icon text-gray-400">↕</span></th>
                                 <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('qty')">Qty <span id="sort-qty" class="sort-icon text-gray-400">↕</span></th>
-                                <th class="px-4 py-3 border-l border-gray-200 text-right">Value (₱)</th>
                                 <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('inTime')">In Time <span id="sort-inTime" class="sort-icon text-gray-400">↕</span></th>
                                 <th class="px-4 py-3 cursor-pointer hover:bg-gray-200 select-none border-l border-gray-200" onclick="handleSort('outTime')">Out Time / Duration <span id="sort-outTime" class="sort-icon text-gray-400">↕</span></th>
                                 <th class="px-4 py-3 text-right border-l border-gray-200">Action</th>
@@ -268,7 +267,6 @@
                                 <th class="px-4 py-3">Order #</th>
                                 <th class="px-4 py-3 text-center">SKU Count</th>
                                 <th class="px-4 py-3 text-center">Total Qty</th>
-                                <th class="px-4 py-3 text-right">Total Amount</th>
                                 <th class="px-4 py-3">Avg Time</th>
                                 <th class="px-4 py-3">Status</th>
                                 <th class="px-4 py-3">Closed</th>
@@ -354,15 +352,12 @@
                     <div class="mb-4 pb-4 border-b border-gray-100">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Bulk Upload (CSV)</label>
                         <input type="file" accept=".csv" onchange="uploadSkuList(this)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"/>
-                        <p class="text-xs text-gray-400 mt-1">Format: SKU, Description, Brand, Price (One per line)</p>
+                        <p class="text-xs text-gray-400 mt-1">Format: SKU, Description, Brand (One per line)</p>
                     </div>
                     <form onsubmit="addSkuToMaster(event)" class="mb-4">
                         <input type="text" id="newSkuCode" required class="w-full border rounded p-2 text-sm mb-2" placeholder="SKU Code (e.g. A-001)">
                         <input type="text" id="newSkuDesc" required class="w-full border rounded p-2 text-sm mb-2" placeholder="Description (e.g. Blue Widget)">
-                        <div class="flex gap-2 mb-2">
-                            <input type="text" id="newSkuBrand" class="w-2/3 border rounded p-2 text-sm" placeholder="Brand Name (Optional)">
-                            <input type="number" id="newSkuPrice" step="0.01" class="w-1/3 border rounded p-2 text-sm" placeholder="Price (₱)">
-                        </div>
+                        <input type="text" id="newSkuBrand" class="w-full border rounded p-2 text-sm mb-2" placeholder="Brand Name (Optional)">
                         <div class="flex gap-2 mb-2">
                             <input type="text" id="newSkuImg" class="flex-grow border rounded p-2 text-sm" placeholder="Image URL (Right click image on Watsons -> Copy Link)">
                             <button type="button" onclick="searchWatsons()" class="bg-blue-100 text-blue-700 px-3 py-2 rounded text-sm font-bold border border-blue-200" title="Search Watsons PH">🔍</button>
@@ -1133,12 +1128,7 @@
 
                 let totalDuration = 0;
                 let completedCount = 0;
-                let totalValue = 0;
                 items.forEach(o => {
-                    const sItem = skuMaster.find(s => s.code === o.sku);
-                    const price = sItem ? (parseFloat(sItem.price) || 0) : 0;
-                    totalValue += (price * o.qty);
-
                     if (o.outTime) {
                         totalDuration += (new Date(o.outTime) - new Date(o.inTime));
                         completedCount++;
@@ -1152,7 +1142,6 @@
                     outTime: maxOutTime,
                     avgDurationMs: avgDurationMs,
                     skuCount: items.length,
-                    totalValue: totalValue,
                     totalQty: items.reduce((sum, item) => sum + item.qty, 0),
                     status: status
                 };
@@ -1211,7 +1200,6 @@
                 const avgMins = item.avgDurationMs ? Math.floor(item.avgDurationMs / 60000) : 0;
                 const avgSecs = item.avgDurationMs ? Math.floor((item.avgDurationMs % 60000) / 1000) : 0;
                 const avgTimeStr = item.avgDurationMs ? `${avgMins}m ${avgSecs}s` : '-';
-                const totalValueStr = item.totalValue ? '₱' + item.totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
 
                 tr.innerHTML = `
                     <td class="px-4 py-3">${d.toLocaleDateString()}</td>
@@ -1219,7 +1207,6 @@
                     <td class="px-4 py-3 font-medium">${item.customer}</td>
                     <td class="px-4 py-3 text-center">${item.skuCount}</td>
                     <td class="px-4 py-3 text-center">${item.totalQty}</td>
-                    <td class="px-4 py-3 text-right font-mono text-xs text-gray-700">${totalValueStr}</td>
                     <td class="px-4 py-3 text-gray-600">${avgTimeStr}</td>
                     <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs font-semibold ${statusClass}">${item.status}</span></td>
                     <td class="px-4 py-3 text-gray-500">${outTimeStr}</td>
@@ -1366,10 +1353,6 @@
                 const displayBrand = skuItem ? (skuItem.brand || '-') : '-';
                 const imgHtml = (skuItem && skuItem.img) ? `<img src="${skuItem.img}" class="w-8 h-8 object-cover rounded border border-gray-200 mr-2 bg-white flex-shrink-0" onerror="this.style.display='none'">` : '';
 
-                const price = skuItem ? (parseFloat(skuItem.price) || 0) : 0;
-                const lineVal = price * order.qty;
-                const lineValStr = lineVal > 0 ? '₱' + lineVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
-
                 // Calculate Duration
                 let durationDisplay = '-';
                 if (isCancelled) {
@@ -1411,7 +1394,6 @@
                     <td class="px-4 py-3 text-gray-600 text-xs border-l border-gray-200">${displayBrand}</td>
                     <td class="px-4 py-3 text-gray-500 text-xs border-l border-gray-200"><div class="flex items-center" title="${titleText}">${imgHtml}<span class="truncate max-w-[150px]">${descriptionText || '-'}</span></div></td>
                     <td class="px-4 py-3 border-l border-gray-200">${order.qty}</td>
-                    <td class="px-4 py-3 border-l border-gray-200 text-right font-mono text-xs text-gray-600">${lineValStr}</td>
                     <td class="px-4 py-3 text-gray-500 border-l border-gray-200">${formatTime(order.inTime)}</td>
                     <td class="px-4 py-3 border-l border-gray-200">${isComplete ? `<span>${formatTime(order.outTime)} <button onclick="editOrderTime(${order.id})" class="text-gray-400 hover:text-primary-600 font-bold ml-1" title="Edit Time">✎</button></span>` + '<br><span class="text-xs">' + durationDisplay + '</span>' : (isCancelled ? durationDisplay : `<span class="live-duration text-yellow-600 font-bold text-xs" data-start="${order.inTime}">...</span>`)}</td>
                     <td class="px-4 py-3 text-right border-l border-gray-200">
@@ -2202,31 +2184,13 @@
             let titleText = '';
             const now = new Date();
 
-            // Apply Date Filter to match dashboard cards
-            const dateFromInput = document.getElementById('dateFrom');
-            const dateToInput = document.getElementById('dateTo');
-            const fromDateStr = dateFromInput ? dateFromInput.value : '';
-            const toDateStr = dateToInput ? dateToInput.value : '';
-            let baseOrders = orders;
-
-            if (fromDateStr || toDateStr) {
-                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
-                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
-                baseOrders = orders.filter(o => {
-                    const orderDate = new Date(o.inTime);
-                    if (fromDate && orderDate < fromDate) return false;
-                    if (toDate && orderDate > toDate) return false;
-                    return true;
-                });
-            }
-
             switch(filterType) {
-                case 'total': filtered = baseOrders; titleText = 'Total Orders'; break;
-                case 'pending': filtered = baseOrders.filter(o => !o.outTime && o.status !== 'CANCELLED'); titleText = 'In Process Orders'; break;
-                case 'completed': filtered = baseOrders.filter(o => o.outTime && o.status !== 'CANCELLED'); titleText = 'Completed Orders'; break;
-                case 'cancelled': filtered = baseOrders.filter(o => o.status === 'CANCELLED'); titleText = 'Cancelled Orders'; break;
+                case 'total': filtered = orders; titleText = 'Total Orders'; break;
+                case 'pending': filtered = orders.filter(o => !o.outTime && o.status !== 'CANCELLED'); titleText = 'In Process Orders'; break;
+                case 'completed': filtered = orders.filter(o => o.outTime && o.status !== 'CANCELLED'); titleText = 'Completed Orders'; break;
+                case 'cancelled': filtered = orders.filter(o => o.status === 'CANCELLED'); titleText = 'Cancelled Orders'; break;
                 case 'overdue': 
-                    filtered = baseOrders.filter(o => {
+                    filtered = orders.filter(o => {
                         if (o.status === 'CANCELLED') return false;
                         const start = new Date(o.inTime);
                         const end = o.outTime ? new Date(o.outTime) : now;
@@ -2472,7 +2436,6 @@
             const code = document.getElementById('newSkuCode').value.toUpperCase();
             const desc = document.getElementById('newSkuDesc').value;
             const brand = document.getElementById('newSkuBrand').value;
-            const price = parseFloat(document.getElementById('newSkuPrice').value) || 0;
             const img = document.getElementById('newSkuImg').value;
 
             if (!code || !desc) return; // Don't add empty entries
@@ -2483,11 +2446,10 @@
                 // Update existing SKU's description
                 skuMaster[existingSkuIndex].desc = desc;
                 skuMaster[existingSkuIndex].brand = brand;
-                skuMaster[existingSkuIndex].price = price;
                 if(img) skuMaster[existingSkuIndex].img = img;
             } else {
                 // Add as a new SKU
-                skuMaster.push({ code, desc, brand, img, price });
+                skuMaster.push({ code, desc, brand, img });
             }
 
             localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
@@ -2495,7 +2457,6 @@
             document.getElementById('newSkuCode').value = '';
             document.getElementById('newSkuDesc').value = '';
             document.getElementById('newSkuBrand').value = '';
-            document.getElementById('newSkuPrice').value = '';
             document.getElementById('newSkuImg').value = '';
             renderSkuMaster();
             renderCharts(); // Update charts immediately
@@ -2522,13 +2483,10 @@
                 list.innerHTML += `<li class="flex justify-between items-center bg-gray-50 p-2 rounded">
                     <div class="flex items-center overflow-hidden w-full mr-2">
                         ${imgDisplay}
-                        <div class="flex flex-col flex-grow min-w-0">
+                        <div class="flex flex-col truncate flex-grow">
                             <span class="text-xs font-bold">${s.code}</span>
                             <span class="text-xs truncate text-gray-600" title="${s.desc}">${s.desc}</span>
-                            <div class="flex justify-between items-center w-full mt-0.5">
-                                <span class="text-[10px] text-gray-400 truncate mr-1">${s.brand || '-'}</span>
-                                <span class="text-[10px] text-gray-600 font-mono font-bold whitespace-nowrap">₱${(parseFloat(s.price)||0).toFixed(2)}</span>
-                            </div>
+                            <span class="text-[10px] text-gray-400">${s.brand || ''}</span>
                         </div>
                     </div>
                     <button onclick="deleteSkuFromMaster('${s.code}')" class="text-red-500 hover:text-red-700 text-xs font-bold">✕</button>
@@ -2566,14 +2524,12 @@
                 let updatedCount = 0;
 
                 lines.forEach(line => {
-                    // Simple CSV Parse: Code, Description, Brand, Price
+                    // Simple CSV Parse: Code, Description, Brand
                     const parts = line.split(',');
                     if (parts.length >= 2) { // Still allow 2 parts for backward compatibility
                         const code = parts[0].trim().toUpperCase();
                         const desc = parts[1].trim();
                         const brand = parts.length > 2 ? parts.slice(2).join(',').trim() : ''; // Handle commas in brand name
-                        const priceStr = parts.length > 3 ? parts[3].trim() : '0';
-                        const price = parseFloat(priceStr) || 0;
                         
                         if (code && desc) {
                             const existingSkuIndex = skuMaster.findIndex(s => s.code === code);
@@ -2582,11 +2538,10 @@
                                 // Update existing SKU
                                 skuMaster[existingSkuIndex].desc = desc;
                                 skuMaster[existingSkuIndex].brand = brand;
-                                skuMaster[existingSkuIndex].price = price;
                                 updatedCount++;
                             } else {
                                 // Add new SKU
-                                skuMaster.push({ code, desc, brand, price });
+                                skuMaster.push({ code, desc, brand });
                                 addedCount++;
                             }
                         }
@@ -2637,7 +2592,6 @@
                 "Closed": item.outTime ? new Date(item.outTime).toLocaleString() : '',
                 "SKU Count": item.skuCount,
                 "Total Qty": item.totalQty,
-                "Total Amount": item.totalValue,
                 "Avg Time (Mins)": item.avgDurationMs ? (item.avgDurationMs / 60000).toFixed(2) : '',
                 "Status": item.status
             }));
@@ -2647,16 +2601,13 @@
                 const skuItem = skuMaster.find(s => s.code === o.sku);
                 const durationMs = o.outTime ? new Date(o.outTime) - new Date(o.inTime) : 0;
                 const durationMins = durationMs > 0 ? (durationMs / 60000).toFixed(1) : '';
-                const price = skuItem ? (parseFloat(skuItem.price) || 0) : 0;
                 
                 return {
                     "Order ID": o.customer,
                     "SKU": o.sku,
                     "Brand": skuItem ? (skuItem.brand || '') : '',
                     "Description": skuItem ? skuItem.desc : '',
-                    "Unit Price": price,
                     "Qty": o.qty,
-                    "Line Total": price * o.qty,
                     "In Time": o.inTime ? new Date(o.inTime).toLocaleString() : '',
                     "Out Time": o.outTime ? new Date(o.outTime).toLocaleString() : '',
                     "Status": o.status === 'CANCELLED' ? 'CANCELLED' : (o.outTime ? 'Completed' : 'Pending'),
