@@ -120,6 +120,12 @@
             <button onclick="dismissBanner()" class="bg-red-800 hover:bg-red-900 text-white py-2 px-6 rounded-full font-bold text-sm border border-red-400 shadow-md">Dismiss</button>
         </div>
 
+        <!-- TOP STATUS BAR -->
+        <div class="flex justify-between items-center bg-white px-6 py-3 rounded-lg shadow-sm mb-6 border border-gray-100">
+            <div class="flex items-center gap-2 text-sm text-gray-600">👋 Welcome, <span class="font-bold text-gray-800">Admin</span></div>
+            <div id="globalClock" class="font-mono font-bold text-lg text-primary-600 tracking-wide"></div>
+        </div>
+
         <!-- HEADER -->
         <div class="mb-8 flex justify-between items-center">
             <div>
@@ -516,6 +522,7 @@
             } else if (savedTheme === 'teal') {
                 document.body.classList.add('theme-teal');
             }
+            startClock();
         });
 
         function checkLoginState() {
@@ -568,6 +575,17 @@
             
             if (liveDurationInterval) clearInterval(liveDurationInterval);
             liveDurationInterval = setInterval(updateLiveDurations, 1000);
+        }
+
+        function startClock() {
+            const el = document.getElementById('globalClock');
+            if (!el) return;
+            const update = () => {
+                const now = new Date();
+                el.innerText = '🕒 ' + now.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+            };
+            update(); // Run immediately
+            setInterval(update, 1000);
         }
         
         function toggleTheme() {
@@ -2224,8 +2242,8 @@
 
         // 8.5 ORDER UPLOAD FUNCTIONS
         function downloadOrderSample() {
-            const headers = "Order Number,SKU,Description,Quantity,Date (YYYY-MM-DD HH:MM)\n";
-            const sample = "ORD-001,A-001,Blue Widget,5,2023-10-25 08:30\nORD-002,B-005,Red Gadget,2,2023-10-25 09:15";
+            const headers = "Order Number,SKU,Description,Quantity,In Time,Out Time\n";
+            const sample = "ORD-001,A-001,Blue Widget,5,25/10/2023 08:30,\nORD-002,B-005,Red Gadget,2,25/10/2023 09:15,25/10/2023 10:00";
             const blob = new Blob([headers + sample], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2348,6 +2366,32 @@
                 // Create a set of existing "order-sku" combinations for efficient lookup to prevent duplicates
                 const existingOrderItems = new Set(orders.map(o => `${o.customer}|${o.sku}`));
 
+                // Helper: Robust Date Parser (Handles DD/MM/YYYY, DD-MM-YYYY, and ISO)
+                const parseCSVDate = (str) => {
+                    if (!str) return null;
+                    str = str.trim();
+                    if (!str) return null;
+
+                    // Regex for DD/MM/YYYY or DD-MM-YYYY with optional time
+                    // Matches: 25/10/2023 14:30 or 25-10-2023
+                    const dmy = str.match(/^(\d{1,2})\/\-\/\-(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+                    if (dmy) {
+                        // Construct Date using local time components (Year, Month 0-idx, Day, Hour, Min, Sec)
+                        return new Date(
+                            parseInt(dmy[3]), 
+                            parseInt(dmy[2]) - 1, 
+                            parseInt(dmy[1]), 
+                            dmy[4] ? parseInt(dmy[4]) : 0, 
+                            dmy[5] ? parseInt(dmy[5]) : 0, 
+                            dmy[6] ? parseInt(dmy[6]) : 0
+                        );
+                    }
+
+                    // Fallback to standard JS parsing (e.g. YYYY-MM-DD)
+                    const d = new Date(str);
+                    return isNaN(d.getTime()) ? null : d;
+                };
+
                 // Skip header if first line contains "Order" or "SKU"
                 const startIndex = (lines[0] && (lines[0].toLowerCase().includes('order') || lines[0].toLowerCase().includes('sku'))) ? 1 : 0;
 
@@ -2355,7 +2399,7 @@
                     const line = lines[i].trim();
                     if (!line) continue;
 
-                    // Expected: Order #, SKU, Description, Qty, Date
+                    // Expected: Order #, SKU, Description, Qty, In Time, Out Time (Optional)
                     const parts = line.split(',');
                     if (parts.length >= 2) {
                         let customer = parts[0].trim();
@@ -2368,37 +2412,46 @@
                         }
                         let desc = '';
                         let qty = 1;
-                        let dateStr = '';
-
-                        // Robust parsing to handle commas in description (e.g. "Widget, Blue")
-                        // If length > 5, we assume the extra fields are part of the description.
-                        // Logic assumes standard 5-column layout: Order, SKU, Desc, Qty, Date.
-                        if (parts.length > 5) {
-                            dateStr = parts[parts.length - 1].trim(); // Date is always last
-                            const qtyRaw = parts[parts.length - 2].trim(); // Qty is 2nd to last
-                            qty = !isNaN(parseInt(qtyRaw)) ? parseInt(qtyRaw) : 1;
-                            desc = parts.slice(2, parts.length - 2).join(',').trim();
-                        } else {
-                            desc = parts[2] ? parts[2].trim() : '';
-                            qty = parts[3] ? parseInt(parts[3].trim()) : 1;
-                            dateStr = parts[4] ? parts[4].trim() : '';
-                        }
-                        
                         let inTime = new Date().toISOString();
-                        if (dateStr) {
-                            let parsedDate = new Date(dateStr);
-                            
-                            // Fix for "Invalid Date" on formats like DD/MM/YYYY (common in CSVs outside US)
-                            if (isNaN(parsedDate.getTime())) {
-                                const dmyMatch = dateStr.match(/^(\d{1,2})\/\-\/\-(?:\s+(\d{1,2}):(\d{2}))?$/);
-                                if (dmyMatch) {
-                                    // Reconstruct date from parts: Year, Month (0-index), Day, Hour, Min
-                                    parsedDate = new Date(dmyMatch[3], dmyMatch[2] - 1, dmyMatch[1], dmyMatch[4] || 0, dmyMatch[5] || 0);
-                                }
-                            }
+                        let outTime = null;
 
-                            // If valid, use it; otherwise defaults to NOW
-                            if (!isNaN(parsedDate.getTime())) inTime = parsedDate.toISOString();
+                        // Robust parsing to handle variable columns and commas in description
+                        // Strategy: Identify Date/Qty columns from the end of the line
+                        
+                        const last = parts[parts.length - 1].trim();
+                        const secondLast = parts[parts.length - 2].trim();
+                        const thirdLast = parts[parts.length - 3].trim();
+
+                        const dateLast = parseCSVDate(last);
+                        const dateSecondLast = parseCSVDate(secondLast);
+                        const numThirdLast = parseInt(thirdLast);
+                        const numSecondLast = parseInt(secondLast);
+
+                        // CASE 1: 6 Columns -> ..., Qty, InTime, OutTime
+                        // Check if 2nd to last is a valid Date and 3rd to last is a Number.
+                        // (Last can be a date or empty string for open orders)
+                        if (dateSecondLast && !isNaN(numThirdLast)) {
+                            qty = numThirdLast;
+                            inTime = dateSecondLast.toISOString();
+                            if (dateLast) outTime = dateLast.toISOString();
+                            desc = parts.slice(2, parts.length - 3).join(',').trim();
+                        }
+                        // CASE 2: 5 Columns -> ..., Qty, InTime
+                        // Check if Last is a Date and 2nd to Last is a Number
+                        else if (parseCSVDate(last) && !isNaN(numSecondLast)) {
+                            qty = numSecondLast;
+                            inTime = parseCSVDate(last).toISOString();
+                            desc = parts.slice(2, parts.length - 2).join(',').trim();
+                        }
+                        // CASE 3: Fallback (Minimal) -> ..., Desc, Qty (Default InTime=Now)
+                        else if (!isNaN(parseInt(parts[parts.length-1]))) {
+                            qty = parseInt(parts[parts.length-1]);
+                            desc = parts.slice(2, parts.length - 1).join(',').trim();
+                        } 
+                        // CASE 4: Simple positional fallback
+                        else {
+                            if(parts[3]) qty = parseInt(parts[3]) || 1;
+                            if(parts[2]) desc = parts[2].trim();
                         }
 
                         if (customer && sku) {
@@ -2418,7 +2471,7 @@
                                 sku,
                                 qty: isNaN(qty) ? 1 : qty,
                                 inTime,
-                                outTime: null
+                                outTime
                             });
                             addedCount++;
                             existingOrderItems.add(uniqueKey); // Add to set to handle duplicates within the same file
