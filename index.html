@@ -120,20 +120,30 @@
             <button onclick="dismissBanner()" class="bg-red-800 hover:bg-red-900 text-white py-2 px-6 rounded-full font-bold text-sm border border-red-400 shadow-md">Dismiss</button>
         </div>
 
-        <!-- TOP STATUS BAR -->
-        <div class="flex justify-between items-center bg-white px-6 py-3 rounded-lg shadow-sm mb-6 border border-gray-100">
-            <div class="flex items-center gap-2 text-sm text-gray-600">👋 Welcome, <span class="font-bold text-gray-800">Admin</span></div>
-            <div id="globalClock" class="font-mono font-bold text-lg text-primary-600 tracking-wide"></div>
-        </div>
-
         <!-- HEADER -->
-        <div class="mb-8 flex justify-between items-center">
+        <div class="mb-8 flex justify-between items-start">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
-                <p class="text-gray-500 text-sm">Manual Entry System</p>
+                <p class="text-gray-500 text-sm mb-2">Manual Entry System</p>
+                <div class="flex items-center gap-4 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                    <div id="globalClock" class="font-mono font-bold text-lg text-primary-600 tracking-wide"></div>
+                    <div class="border-l border-gray-300 h-6"></div>
+                    <div class="text-sm text-gray-600">👋 Welcome, <span class="font-bold text-gray-800">Admin</span></div>
+                </div>
             </div>
             <div class="flex gap-4 items-center">
+                <!-- DATE PICKER (Moved here) -->
+                <div class="flex items-center gap-2 bg-white p-2 rounded shadow border border-gray-200 mr-2">
+                    <label for="dateFrom" class="text-xs font-bold text-gray-600">From:</label>
+                    <input type="date" id="dateFrom" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
+                    <label for="dateTo" class="text-xs font-bold text-gray-600">To:</label>
+                    <input type="date" id="dateTo" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
+                    <button onclick="clearDateFilter()" class="text-gray-400 hover:text-red-500" title="Clear Date Filter">
+                        <span class="text-xl leading-none">&times;</span>
+                    </button>
+                </div>
                 <button onclick="openInventoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📦 Inventory</button>
+                <button onclick="openFulfillmentModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">🚀 Fulfillment</button>
                 <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
                 <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
                 <button onclick="generateDemoData()" class="text-purple-600 text-sm hover:underline">🎲 Test Data</button>
@@ -193,17 +203,6 @@
                             <button onclick="performBulkAction('complete')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded shadow-sm">Complete</button>
                             <button onclick="performBulkAction('cancel')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded shadow-sm">Cancel</button>
                             <button onclick="performBulkAction('delete')" class="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded shadow-sm">Delete</button>
-                        </div>
-                        <div class="flex items-center gap-2 border-l border-gray-300 pl-2 ml-2">
-                            <label for="dateFrom" class="text-xs font-medium text-gray-600">From:</label>
-                            <input type="date" id="dateFrom" onchange="handleSearch()" class="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 w-36">
-                            <label for="dateTo" class="text-xs font-medium text-gray-600">To:</label>
-                            <input type="date" id="dateTo" onchange="handleSearch()" class="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 w-36">
-                            <button onclick="clearDateFilter()" class="text-gray-400 hover:text-red-500" title="Clear Date Filter">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
                         </div>
                         <div class="flex gap-1">
                             <button onclick="downloadOrderSample()" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1.5 rounded border border-gray-300 flex items-center gap-1 whitespace-nowrap" title="Download Template">📄 Sample</button>
@@ -432,6 +431,63 @@
         </div>
     </div>
 
+    <!-- FULFILLMENT MODAL -->
+    <div id="fulfillmentModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">🚀 Fulfillment Dashboard</h2>
+                    <p class="text-sm text-gray-500">Performance Metrics, Health Score & Efficiency</p>
+                </div>
+                <button onclick="closeFulfillmentModal()" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-gray-50 flex-grow">
+                <!-- KPI CARDS -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card p-4 border-l-4 border-blue-500">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Fulfillment Rate</p>
+                        <p class="text-2xl font-bold text-gray-800" id="fulRate">0%</p>
+                        <p class="text-xs text-gray-400 mt-1">Completed / Total</p>
+                    </div>
+                    <div class="card p-4 border-l-4 border-green-500">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Avg Cycle Time</p>
+                        <p class="text-2xl font-bold text-gray-800" id="fulAvgTime">0m</p>
+                        <p class="text-xs text-gray-400 mt-1">Time to Complete</p>
+                    </div>
+                    <div class="card p-4 border-l-4 border-purple-500">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Performance Points</p>
+                        <p class="text-2xl font-bold text-gray-800" id="fulPoints">0</p>
+                        <p class="text-xs text-gray-400 mt-1">Gamified Score</p>
+                    </div>
+                    <div class="card p-4 border-l-4 border-red-500">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Health Status</p>
+                        <p class="text-2xl font-bold text-gray-800" id="fulHealth">-</p>
+                        <p class="text-xs text-gray-400 mt-1" id="fulHealthDesc">Based on speed</p>
+                    </div>
+                </div>
+
+                <!-- CHARTS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6">
+                        <h3 class="font-bold text-gray-700 mb-4">⏱️ Duration Distribution</h3>
+                        <div class="h-64">
+                            <canvas id="fulfillmentDistChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="font-bold text-gray-700 mb-4">📈 Hourly Throughput</h3>
+                        <div class="h-64">
+                            <canvas id="fulfillmentHourlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 text-right">
+                <button onclick="closeFulfillmentModal()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SUMMARY LIST MODAL -->
     <div id="summaryListModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
@@ -509,6 +565,8 @@
         let brandChartInstance = null;
         let inventoryHealthChartInstance = null;
         let abcChartInstance = null;
+        let fulfillmentDistChart = null;
+        let fulfillmentHourlyChart = null;
         let liveDurationInterval = null;
         let currentSort = { column: 'inTime', direction: 'desc' };
         let isBannerDismissed = false;
@@ -1159,7 +1217,6 @@
         }
 
         function renderTable() {
-            renderStats();
             const tbody = document.getElementById('orderTableBody');
             tbody.innerHTML = '';
             
@@ -1315,7 +1372,7 @@
                 }
             });
             
-            renderStats(); // Check for status updates (e.g. overdue) every second
+            renderStats(); // Check for status updates (e.g. overdue) and recalculate cards every second
         }
 
         // 5.2 SORTING
@@ -1435,13 +1492,33 @@
         function handleSearch() {
             currentPage = 1;
             renderActiveTab();
+            renderStats(); // Update cards immediately
+            renderCharts(); // Update charts immediately
         }
 
         // 6. RENDER DASHBOARD (CHARTS)
         function renderCharts() {
             // --- 1. Velocity Chart (Fast Moving SKUs) ---
             const skuData = {};
-            orders.forEach(order => {
+            
+            // Filter orders for charts based on date picker
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
+            let chartOrders = orders;
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+                chartOrders = orders.filter(o => {
+                    const orderDate = new Date(o.inTime);
+                    if (fromDate && orderDate < fromDate) return false;
+                    if (toDate && orderDate > toDate) return false;
+                    return true;
+                });
+            }
+
+            chartOrders.forEach(order => {
                 if (!skuData[order.sku]) skuData[order.sku] = { qty: 0, lines: 0, customers: new Set() };
                 skuData[order.sku].qty += order.qty;
                 skuData[order.sku].lines += 1;
@@ -1497,7 +1574,7 @@
 
             // Create a map of distinct orders and their creation time for volume charts
             const distinctOrdersByTime = {};
-            orders.forEach(o => {
+            chartOrders.forEach(o => {
                 if (!distinctOrdersByTime[o.customer]) {
                     distinctOrdersByTime[o.customer] = o.inTime;
                 }
@@ -1568,7 +1645,7 @@
 
             // --- 4. Brand Chart (Doughnut) ---
             const brandDataRaw = {};
-            orders.forEach(order => {
+            chartOrders.forEach(order => {
                 const skuItem = skuMaster.find(s => s.code === order.sku);
                 const brand = (skuItem && skuItem.brand) ? skuItem.brand : 'Unbranded';
                 
@@ -1912,6 +1989,126 @@
             });
         }
 
+        // 6.7 FULFILLMENT DASHBOARD
+        function openFulfillmentModal() {
+            document.getElementById('fulfillmentModal').classList.remove('hidden');
+            renderFulfillmentDashboard();
+        }
+
+        function closeFulfillmentModal() {
+            document.getElementById('fulfillmentModal').classList.add('hidden');
+        }
+
+        function renderFulfillmentDashboard() {
+            // Use the same date-filtered orders as the main dashboard
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
+            let relevantOrders = orders;
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+                relevantOrders = orders.filter(o => {
+                    const orderDate = new Date(o.inTime);
+                    if (fromDate && orderDate < fromDate) return false;
+                    if (toDate && orderDate > toDate) return false;
+                    return true;
+                });
+            }
+
+            const completedOrders = relevantOrders.filter(o => o.outTime && o.status !== 'CANCELLED');
+            const totalOrders = relevantOrders.filter(o => o.status !== 'CANCELLED').length;
+
+            // 1. Fulfillment Rate
+            const fulRate = totalOrders > 0 ? (completedOrders.length / totalOrders) * 100 : 0;
+            document.getElementById('fulRate').innerText = `${fulRate.toFixed(0)}%`;
+
+            // 2. Average Cycle Time & Durations array for charts
+            let totalDurationMins = 0;
+            const durations = [];
+            completedOrders.forEach(o => {
+                const durationMs = new Date(o.outTime) - new Date(o.inTime);
+                const durationMins = durationMs / 60000;
+                totalDurationMins += durationMins;
+                durations.push(durationMins);
+            });
+            const avgTime = completedOrders.length > 0 ? totalDurationMins / completedOrders.length : 0;
+            document.getElementById('fulAvgTime').innerText = `${avgTime.toFixed(1)}m`;
+
+            // 3. Performance Points & Health
+            let points = 0;
+            durations.forEach(d => {
+                if (d <= 5) points += 10; // Excellent
+                else if (d <= 15) points += 5; // Good
+                else if (d <= 30) points += 1; // Ok
+                else points -= 5; // Overdue
+            });
+            document.getElementById('fulPoints').innerText = points;
+
+            let health = '-';
+            let healthDesc = 'Not enough data';
+            if (avgTime > 0) {
+                if (avgTime <= 10) { health = 'Excellent'; healthDesc = 'Avg time under 10 mins'; }
+                else if (avgTime <= 20) { health = 'Good'; healthDesc = 'Avg time under 20 mins'; }
+                else if (avgTime <= 30) { health = 'Fair'; healthDesc = 'Avg time under 30 mins'; }
+                else { health = 'Poor'; healthDesc = 'Avg time over 30 mins'; }
+            }
+            document.getElementById('fulHealth').innerText = health;
+            document.getElementById('fulHealthDesc').innerText = healthDesc;
+
+            // --- CHARTS ---
+            // 4. Duration Distribution Chart
+            const distBuckets = { '0-5m': 0, '5-10m': 0, '10-20m': 0, '20-30m': 0, '30m+': 0 };
+            durations.forEach(d => {
+                if (d <= 5) distBuckets['0-5m']++;
+                else if (d <= 10) distBuckets['5-10m']++;
+                else if (d <= 20) distBuckets['10-20m']++;
+                else if (d <= 30) distBuckets['20-30m']++;
+                else distBuckets['30m+']++;
+            });
+
+            const ctxDist = document.getElementById('fulfillmentDistChart').getContext('2d');
+            if (fulfillmentDistChart) fulfillmentDistChart.destroy();
+            fulfillmentDistChart = new Chart(ctxDist, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(distBuckets),
+                    datasets: [{
+                        label: 'Completed Orders',
+                        data: Object.values(distBuckets),
+                        backgroundColor: ['#22c55e', '#84cc16', '#f59e0b', '#f97316', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Number of Orders' } } } }
+            });
+
+            // 5. Hourly Throughput Chart
+            const hourlyThroughput = new Array(24).fill(0);
+            completedOrders.forEach(o => {
+                const hour = new Date(o.outTime).getHours();
+                hourlyThroughput[hour]++;
+            });
+
+            const ctxHourly = document.getElementById('fulfillmentHourlyChart').getContext('2d');
+            if (fulfillmentHourlyChart) fulfillmentHourlyChart.destroy();
+            fulfillmentHourlyChart = new Chart(ctxHourly, {
+                type: 'line',
+                data: {
+                    labels: hourlyThroughput.map((_, i) => `${i}:00`),
+                    datasets: [{
+                        label: 'Orders Completed',
+                        data: hourlyThroughput,
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Orders per Hour' } } } }
+            });
+        }
+
         // 6.6 SUMMARY LIST MODAL LOGIC
         function viewSummaryList(filterType) {
             currentSummaryFilter = filterType;
@@ -1967,6 +2164,7 @@
             if (!document.getElementById('orderModal').classList.contains('hidden') ||
                 !document.getElementById('editOrderModal').classList.contains('hidden') ||
                 !document.getElementById('inventoryModal').classList.contains('hidden') ||
+                !document.getElementById('fulfillmentModal').classList.contains('hidden') ||
                 !document.getElementById('summaryListModal').classList.contains('hidden')) {
                 // Silently skip refresh to avoid bothering user
                 return;
@@ -2105,9 +2303,26 @@
         }
 
         function renderStats() {
-            // Group items by Order ID to calculate distinct order stats
+            // Filter orders for statistics based on date picker
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+            const fromDateStr = dateFromInput ? dateFromInput.value : '';
+            const toDateStr = dateToInput ? dateToInput.value : '';
+            let statsOrders = orders;
+
+            if (fromDateStr || toDateStr) {
+                const fromDate = fromDateStr ? new Date(fromDateStr + 'T00:00:00') : null;
+                const toDate = toDateStr ? new Date(toDateStr + 'T23:59:59') : null;
+                statsOrders = orders.filter(o => {
+                    const orderDate = new Date(o.inTime);
+                    if (fromDate && orderDate < fromDate) return false;
+                    if (toDate && orderDate > toDate) return false;
+                    return true;
+                });
+            }
+
             const orderGroups = {};
-            orders.forEach(o => {
+            statsOrders.forEach(o => {
                 if (!orderGroups[o.customer]) orderGroups[o.customer] = [];
                 orderGroups[o.customer].push(o);
             });
