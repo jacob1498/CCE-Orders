@@ -121,38 +121,32 @@
         </div>
 
         <!-- HEADER -->
-        <div class="mb-8 flex justify-between items-start">
+        <div class="mb-8 flex flex-col lg:flex-row justify-between items-start gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">📦 CCE Order Tracker </h1>
                 <p class="text-gray-500 text-sm mb-2">Manual Entry System</p>
             </div>
-            <div class="flex flex-col items-end gap-3">
-                <!-- CLOCK & WELCOME (Moved to Right) -->
+            <div class="flex flex-col items-end gap-3 w-full lg:w-auto">
                 <div class="flex items-center gap-4 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                    <div id="globalClock" class="font-mono font-bold text-lg text-primary-600 tracking-wide"></div>
-                    <div class="border-l border-gray-300 h-6"></div>
                     <div class="text-sm text-gray-600">👋 Welcome, <span class="font-bold text-gray-800">Admin</span></div>
+                    <div class="border-l border-gray-300 h-6"></div>
+                    <div id="headerRealTimeClock" class="font-mono font-bold text-lg text-primary-600 tracking-wide">Loading...</div>
                 </div>
-
-                <div class="flex gap-4 items-center">
-                <!-- DATE PICKER (Moved here) -->
-                <div class="flex items-center gap-2 bg-white p-2 rounded shadow border border-gray-200 mr-2">
-                    <label for="dateFrom" class="text-xs font-bold text-gray-600">From:</label>
-                    <input type="date" id="dateFrom" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
-                    <label for="dateTo" class="text-xs font-bold text-gray-600">To:</label>
-                    <input type="date" id="dateTo" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
-                    <button onclick="clearDateFilter()" class="text-gray-400 hover:text-red-500" title="Clear Date Filter">
-                        <span class="text-xl leading-none">&times;</span>
-                    </button>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <div class="flex items-center gap-2 bg-white p-2 rounded shadow border border-gray-200">
+                        <label for="dateFrom" class="text-xs font-bold text-gray-600">From:</label>
+                        <input type="date" id="dateFrom" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
+                        <label for="dateTo" class="text-xs font-bold text-gray-600">To:</label>
+                        <input type="date" id="dateTo" onchange="handleSearch()" class="border border-gray-300 rounded p-1 text-xs focus:ring-primary-500 focus:border-primary-500">
+                        <button onclick="clearDateFilter()" class="text-gray-400 hover:text-red-500" title="Clear Date Filter"><span class="text-xl leading-none">&times;</span></button>
+                    </div>
+                    <button onclick="openInventoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📦 Inventory</button>
+                    <button onclick="openFulfillmentModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">🚀 Fulfillment</button>
+                    <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
+                    <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
+                    <button onclick="toggleTheme()" class="text-gray-500 text-sm hover:underline" id="themeBtn">🎨 Theme</button>
+                    <button onclick="handleLogout()" class="text-primary-500 text-sm hover:underline">Logout</button>
                 </div>
-                <button onclick="openInventoryModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📦 Inventory</button>
-                <button onclick="openFulfillmentModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">🚀 Fulfillment</button>
-                <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded shadow flex items-center gap-2">📊 Export to Excel</button>
-                <button onclick="clearData()" class="text-red-500 text-sm hover:underline">Reset Data</button>
-                <button onclick="generateDemoData()" class="text-purple-600 text-sm hover:underline">🎲 Test Data</button>
-                <button onclick="toggleTheme()" class="text-gray-500 text-sm hover:underline" id="themeBtn">🎨 Theme</button>
-                <button onclick="handleLogout()" class="text-primary-500 text-sm hover:underline">Logout</button>
-            </div>
             </div>
         </div>
     
@@ -657,7 +651,7 @@
         }
 
         function startClock() {
-            const el = document.getElementById('globalClock');
+            const el = document.getElementById('headerRealTimeClock');
             if (!el) return;
             const update = () => {
                 const now = new Date();
@@ -2237,73 +2231,6 @@
                 stockLevels = {};
                 initializeApp(); // Use initializeApp to fully reset the view
             }
-        }
-
-        function generateDemoData() {
-            if (!confirm("This will clear all current data and load a demo set. Continue?")) return;
-
-            // 1. Define Demo SKU Master
-            const demoSkuMaster = [
-                { code: 'LIP-001', desc: 'Velvet Matte Lipstick', brand: 'Luxe' },
-                { code: 'LIP-002', desc: 'Hydra-Gloss Lip Shine', brand: 'Luxe' },
-                { code: 'FND-101', desc: 'Pro-Filter Foundation', brand: 'Aura' },
-                { code: 'FND-105', desc: 'Sheer Glow Foundation', brand: 'Aura' },
-                { code: 'EYE-201', desc: 'Galaxy Eyeshadow Palette', brand: 'Stellar' },
-                { code: 'EYE-202', desc: 'Liquid Precision Eyeliner', brand: 'Stellar' },
-                { code: 'SKN-301', desc: 'Vitamin C Serum', brand: 'GlowUp' },
-                { code: 'SKN-302', desc: 'Hyaluronic Acid Moisturizer', brand: 'GlowUp' },
-                { code: 'BLH-401', desc: 'Rose Petal Blush', brand: 'Luxe' },
-            ];
-
-            // 1.5 Define Demo Stock Levels
-            const demoStock = {
-                'LIP-001': 150,
-                'LIP-002': 20,  // Low stock
-                'FND-101': 500, // High stock
-                'FND-105': 80,
-                'EYE-201': 5,   // Critical
-                'EYE-202': 200,
-                'SKN-301': 0,   // Out of stock
-                'SKN-302': 45,
-                'BLH-401': 300
-            };
-
-            // 2. Define Demo Orders
-            const demoOrders = [];
-            const now = new Date();
-            const addOrder = (customer, sku, qty, minutesAgo, isComplete) => {
-                const inTime = new Date(now.getTime() - minutesAgo * 60000).toISOString();
-                let outTime = null;
-                if (isComplete) {
-                    outTime = new Date(new Date(inTime).getTime() + (Math.random() * 20 + 5) * 60000).toISOString(); // 5-25 mins later
-                }
-                demoOrders.push({ id: Date.now() + Math.random(), customer, sku, qty, inTime, outTime, status: null });
-            };
-
-            addOrder('ORD-1001', 'LIP-001', 2, 120, true);
-            addOrder('ORD-1001', 'FND-101', 1, 120, true);
-            addOrder('ORD-1002', 'EYE-202', 1, 95, true);
-            addOrder('ORD-1003', 'SKN-301', 1, 65, true);
-            addOrder('ORD-1003', 'SKN-302', 1, 65, true);
-            addOrder('ORD-1004', 'LIP-002', 3, 40, false); // Overdue
-            addOrder('ORD-1005', 'FND-105', 1, 25, false); // Pending
-            addOrder('ORD-1006', 'EYE-201', 1, 15, false); // Pending
-            addOrder('ORD-1007', 'BLH-401', 2, 5, false); // Pending
-
-            const cancelledOrderTime = new Date(now.getTime() - 180 * 60000).toISOString();
-            demoOrders.push({ id: Date.now() + Math.random(), customer: 'ORD-999', sku: 'LIP-001', qty: 1, inTime: cancelledOrderTime, outTime: new Date(new Date(cancelledOrderTime).getTime() + 5 * 60000).toISOString(), status: 'CANCELLED' });
-
-            // 3. Update State and Local Storage
-            skuMaster = demoSkuMaster;
-            stockLevels = demoStock;
-            orders = demoOrders.sort((a, b) => new Date(b.inTime) - new Date(a.inTime));
-            localStorage.setItem('simpleTrackerSkuMaster', JSON.stringify(skuMaster));
-            localStorage.setItem('simpleTrackerOrders', JSON.stringify(orders));
-            localStorage.setItem('simpleTrackerStock', JSON.stringify(stockLevels));
-
-            // 4. Re-render everything
-            initializeApp();
-            showToast('Demo data has been loaded.', 'success');
         }
 
         function renderStats() {
